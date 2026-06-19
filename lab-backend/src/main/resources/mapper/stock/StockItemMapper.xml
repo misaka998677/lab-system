@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lab.module.stock.mapper.StockItemMapper">
+  <resultMap id="ItemMap" type="com.lab.module.stock.entity.StockItem">
+    <id     column="id"          property="id"/>
+    <result column="code"        property="code"/>
+    <result column="name"        property="name"/>
+    <result column="category"    property="category"/>
+    <result column="unit"        property="unit"/>
+    <result column="qty"         property="qty"/>
+    <result column="warn_qty"    property="warnQty"/>
+    <result column="lab_id"      property="labId"/>
+    <result column="remark"      property="remark"/>
+    <result column="create_time" property="createTime"/>
+    <result column="update_time" property="updateTime"/>
+    <result column="deleted"     property="deleted"/>
+    <result column="lab_name"    property="labName"/>
+  </resultMap>
+
+  <sql id="base">
+    SELECT s.*, r.name AS lab_name FROM stock_item s
+    LEFT JOIN lab_room r ON r.id = s.lab_id
+  </sql>
+
+  <select id="page" resultMap="ItemMap">
+    <include refid="base"/>
+    <where>
+      s.deleted = 0
+      <if test="keyword != null and keyword != ''">
+        AND (s.code LIKE CONCAT('%',#{keyword},'%') OR s.name LIKE CONCAT('%',#{keyword},'%'))
+      </if>
+      <if test="labId != null">AND s.lab_id = #{labId}</if>
+      <if test="warningOnly != null and warningOnly == 1">AND s.qty &lt;= s.warn_qty</if>
+      <if test="scopeLabIds != null and scopeLabIds.size() > 0">
+        AND s.lab_id IN
+        <foreach collection="scopeLabIds" item="lid" open="(" separator="," close=")">
+          #{lid}
+        </foreach>
+      </if>
+    </where>
+    ORDER BY s.id DESC
+  </select>
+
+  <select id="findById" resultMap="ItemMap">
+    <include refid="base"/>
+    WHERE s.id = #{id} AND s.deleted = 0
+  </select>
+
+  <insert id="insert" parameterType="com.lab.module.stock.entity.StockItem"
+          useGeneratedKeys="true" keyProperty="id">
+    INSERT INTO stock_item(code, name, category, unit, qty, warn_qty, lab_id, remark)
+    VALUES (#{code}, #{name}, #{category}, #{unit}, #{qty}, #{warnQty}, #{labId}, #{remark})
+  </insert>
+
+  <update id="update" parameterType="com.lab.module.stock.entity.StockItem">
+    UPDATE stock_item
+    <set>
+      code = #{code},
+      name = #{name},
+      category = #{category},
+      unit = #{unit},
+      qty = #{qty},
+      warn_qty = #{warnQty},
+      lab_id = #{labId},
+      remark = #{remark},
+    </set>
+    WHERE id = #{id}
+  </update>
+
+  <update id="deleteById">UPDATE stock_item SET deleted = 1 WHERE id = #{id}</update>
+
+  <update id="updateQty">UPDATE stock_item SET qty = #{qty} WHERE id = #{id}</update>
+
+  <select id="warningList" resultMap="ItemMap">
+    <include refid="base"/>
+    WHERE s.deleted = 0 AND s.qty &lt;= s.warn_qty
+    <if test="scopeLabIds != null and scopeLabIds.size() > 0">
+      AND s.lab_id IN
+      <foreach collection="scopeLabIds" item="lid" open="(" separator="," close=")">
+        #{lid}
+      </foreach>
+    </if>
+    ORDER BY (s.qty - s.warn_qty) ASC, s.id DESC
+    <if test="limit != null">LIMIT #{limit}</if>
+  </select>
+
+  <select id="countWarning" resultType="int">
+    SELECT COUNT(1) FROM stock_item WHERE deleted = 0 AND qty &lt;= warn_qty
+    <if test="scopeLabIds != null and scopeLabIds.size() > 0">
+      AND lab_id IN
+      <foreach collection="scopeLabIds" item="lid" open="(" separator="," close=")">
+        #{lid}
+      </foreach>
+    </if>
+  </select>
+
+  <select id="findAll" resultMap="ItemMap">
+    <include refid="base"/>
+    <where>
+      s.deleted = 0
+      <if test="scopeLabIds != null and scopeLabIds.size() > 0">
+        AND s.lab_id IN
+        <foreach collection="scopeLabIds" item="lid" open="(" separator="," close=")">
+          #{lid}
+        </foreach>
+      </if>
+    </where>
+    ORDER BY s.id DESC
+  </select>
+</mapper>

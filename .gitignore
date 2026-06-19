@@ -1,0 +1,56 @@
+# ==== Java / Maven ====
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+*.log
+
+# ==== Node.js / 前端 ====
+node_modules/
+dist/
+build/
+.npm
+.cache/
+.DS_Store
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ==== Python 测试脚本 ====
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+*.pyc
+
+# ==== Playwright 浏览器二进制（外部安装） ====
+.playwright/
+ms-playwright/
+
+# ==== 项目内的调试输出 ====
+dogfood-output/
+test_report.json
+test_report.txt
+scripts/sandbox/
+tests/sandbox/
+
+# ==== IDE ====
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.settings/
+.project
+.classpath
+
+# ==== OS ====
+Thumbs.db
+.DS_Store
+.DS_Store?
+ehthumbs.db

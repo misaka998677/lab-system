@@ -1,0 +1,253 @@
+/* ============================================================
+ * lab-frontend - 全局样式
+ * 基础布局 + 工作台/统计/耗材模块通用类
+ * ============================================================ */
+
+html, body, #app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: 'Helvetica Neue', Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+body {
+  background: #f4f6fa;
+  color: #303133;
+}
+
+/* ---------- 基础容器 ---------- */
+.app-container {
+  padding: 20px;
+}
+
+.page-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: calc(100vh - 90px);
+}
+
+/* ---------- 页头 ---------- */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  background: #ffffff;
+  padding: 18px 22px;
+  border-radius: 8px;
+  border: 1px solid #ebeef5;
+}
+
+.page-header h2 {
+  margin: 0 0 6px 0;
+  font-size: 20px;
+  color: #303133;
+}
+
+.page-header p {
+  margin: 0;
+  color: #909399;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.hero-header {
+  background: linear-gradient(120deg, #2f6fed 0%, #4f9bff 100%);
+  border: none;
+  color: #ffffff;
+}
+
+.hero-header h2 {
+  color: #ffffff;
+}
+
+.hero-header p {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.hero-user {
+  text-align: right;
+  min-width: 160px;
+}
+
+.hero-user-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.hero-user-role {
+  margin-top: 4px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.hero-header .muted {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* ---------- 旧筛选条兼容 ---------- */
+.filter-bar {
+  margin-bottom: 0;
+}
+.filter-bar .el-form-item {
+  margin-bottom: 0;
+}
+
+.toolbar {
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* ---------- 查询/表格卡片 ---------- */
+.query-card {
+  border-radius: 8px;
+  border: 1px solid #ebeef5;
+}
+
+.query-card .el-card__body {
+  padding: 14px 18px;
+}
+
+.table-card {
+  border-radius: 8px;
+  border: 1px solid #ebeef5;
+  margin-bottom: 0;
+}
+
+.table-card .el-card__header {
+  padding: 12px 18px;
+  background: #fafbfc;
+}
+
+.table-card .el-card__body {
+  padding: 12px 18px 18px;
+}
+
+.card-header-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.card-header-title > span:first-child {
+  font-size: 15px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.card-header-title .muted {
+  font-size: 12px;
+}
+
+/* ---------- 指标卡片 ---------- */
+.metric-row {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 14px;
+}
+
+@media (max-width: 1280px) {
+  .metric-row { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .metric-row { grid-template-columns: repeat(2, 1fr); }
+}
+
+.metric-card {
+  border-radius: 8px;
+  border: 1px solid #ebeef5;
+  background: #ffffff;
+  transition: box-shadow .2s ease, transform .2s ease;
+}
+
+.metric-card:hover {
+  box-shadow: 0 4px 16px rgba(47, 111, 237, 0.08);
+  transform: translateY(-1px);
+}
+
+.metric-card .el-card__body {
+  padding: 16px 18px;
+}
+
+.metric-label {
+  color: #909399;
+  font-size: 13px;
+}
+
+.metric-value {
+  font-size: 26px;
+  font-weight: 600;
+  margin: 6px 0;
+  color: #303133;
+  line-height: 1.2;
+}
+
+.metric-desc,
+.metric-foot {
+  color: #b1b3b8;
+  font-size: 12px;
+}
+
+/* ---------- 文本辅助类 ---------- */
+.muted {
+  color: #909399;
+}
+
+.small {
+  font-size: 12px;
+}
+
+.danger-text {
+  color: #f56c6c;
+  font-weight: 600;
+}
+
+/* ---------- 分页器 ---------- */
+.pager {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ---------- 提醒/空态 ---------- */
+.empty-note {
+  padding: 28px 0;
+  text-align: center;
+  color: #909399;
+  font-size: 13px;
+}
+
+.warning-line {
+  padding: 10px 0;
+  border-bottom: 1px dashed #ebeef5;
+}
+
+.warning-line:last-child {
+  border-bottom: none;
+}
+
+/* ---------- 工作台特殊布局 ---------- */
+.dashboard-page .el-row + .el-row {
+  margin-top: 16px;
+}
+
+/* ---------- Element UI 微调 ---------- */
+.el-button--danger.is-plain {
+  background: #fff5f5;
+}
+
+.el-tag--mini {
+  height: 20px;
+  line-height: 18px;
+}
+
+.el-table th.el-table__cell {
+  background: #f6f8fb;
+  color: #303133;
+  font-weight: 600;
+}

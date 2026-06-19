@@ -1,0 +1,27 @@
+spring:
+  profiles: prod
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/lab_system?useUnicode=true&characterEncoding=utf8&useSSL=true&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:123456}
+
+server:
+  port: 9090
+
+mybatis:
+  configuration:
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+
+lab:
+  jwt:
+    secret: ${JWT_SECRET:lab-system-jwt-secret-key-for-hmac-sha256-prod-override}
+    expire: 86400
+  data-scope:
+    enabled: true
+  ws:
+    url: ${WS_URL:wss://your-domain.com/api/ws}
+
+logging:
+  level:
+    com.lab: info
+    org.springframework.security: warn

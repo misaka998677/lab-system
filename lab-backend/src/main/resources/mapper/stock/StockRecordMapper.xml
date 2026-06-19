@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lab.module.stock.mapper.StockRecordMapper">
+  <resultMap id="RecordMap" type="com.lab.module.stock.entity.StockRecord">
+    <id     column="id"             property="id"/>
+    <result column="item_id"        property="itemId"/>
+    <result column="type"           property="type"/>
+    <result column="qty"            property="qty"/>
+    <result column="reservation_id" property="reservationId"/>
+    <result column="user_id"        property="userId"/>
+    <result column="remark"         property="remark"/>
+    <result column="create_time"    property="createTime"/>
+    <result column="item_name"      property="itemName"/>
+    <result column="item_code"      property="itemCode"/>
+    <result column="unit"           property="unit"/>
+    <result column="operator_name"  property="operatorName"/>
+    <result column="reservation_no" property="reservationNo"/>
+  </resultMap>
+
+  <select id="page" resultMap="RecordMap">
+    SELECT sr.*, si.code AS item_code, si.name AS item_name, si.unit AS unit,
+           u.real_name AS operator_name, lr.reserve_no AS reservation_no
+    FROM stock_record sr
+    LEFT JOIN stock_item si      ON si.id = sr.item_id
+    LEFT JOIN sys_user   u       ON u.id  = sr.user_id
+    LEFT JOIN lab_reservation lr ON lr.id = sr.reservation_id
+    <where>
+      <if test="itemId != null">AND sr.item_id = #{itemId}</if>
+      <if test="type   != null">AND sr.type    = #{type}</if>
+      <if test="reservationId != null">AND sr.reservation_id = #{reservationId}</if>
+      <if test="userId != null">AND sr.user_id = #{userId}</if>
+      <if test="scopeLabIds != null and scopeLabIds.size() > 0">
+        AND si.lab_id IN
+        <foreach collection="scopeLabIds" item="lid" open="(" separator="," close=")">
+          #{lid}
+        </foreach>
+      </if>
+    </where>
+    ORDER BY sr.id DESC
+  </select>
+
+  <insert id="insert" parameterType="com.lab.module.stock.entity.StockRecord"
+          useGeneratedKeys="true" keyProperty="id">
+    INSERT INTO stock_record(item_id, type, qty, reservation_id, user_id, remark)
+    VALUES (#{itemId}, #{type}, #{qty}, #{reservationId}, #{userId}, #{remark})
+  </insert>
+
+  <select id="sumInQty" resultType="java.lang.Integer">
+    SELECT COALESCE(SUM(sr.qty), 0) FROM stock_record sr
+    LEFT JOIN stock_item si ON si.id = sr.item_id
+    WHERE sr.type = 1
+    <if test="scopeLabIds != null and scopeLabIds.size() > 0">
+      AND si.lab_id IN
+      <foreach collection="scopeLabIds" item="lid" open="(" separator="," close=")">
+        #{lid}
+      </foreach>
+    </if>
+  </select>
+
+  <select id="sumOutQty" resultType="java.lang.Integer">
+    SELECT COALESCE(SUM(sr.qty), 0) FROM stock_record sr
+    LEFT JOIN stock_item si ON si.id = sr.item_id
+    WHERE sr.type = 2
+    <if test="scopeLabIds != null and scopeLabIds.size() > 0">
+      AND si.lab_id IN
+      <foreach collection="scopeLabIds" item="lid" open="(" separator="," close=")">
+        #{lid}
+      </foreach>
+    </if>
+  </select>
+
+  <select id="topUsage" resultType="java.util.LinkedHashMap">
+    SELECT sr.item_id  AS itemId,
+           si.code     AS itemCode,
+           si.name     AS itemName,
+           si.unit     AS unit,
+           SUM(sr.qty) AS qty
+    FROM stock_record sr
+    LEFT JOIN stock_item si ON si.id = sr.item_id
+    WHERE sr.type = 2
+    <if test="scopeLabIds != null and scopeLabIds.size() > 0">
+      AND si.lab_id IN
+      <foreach collection="scopeLabIds" item="lid" open="(" separator="," close=")">
+        #{lid}
+      </foreach>
+    </if>
+    GROUP BY sr.item_id, si.code, si.name, si.unit
+    ORDER BY qty DESC
+    <if test="limit != null">LIMIT #{limit}</if>
+  </select>
+
+  <select id="findAll" resultMap="RecordMap">
+    SELECT sr.*, si.code AS item_code, si.name AS item_name, si.unit AS unit,
+           u.real_name AS operator_name, lr.reserve_no AS reservation_no
+    FROM stock_record sr
+    LEFT JOIN stock_item si      ON si.id = sr.item_id
+    LEFT JOIN sys_user   u       ON u.id  = sr.user_id
+    LEFT JOIN lab_reservation lr ON lr.id = sr.reservation_id
+    <where>
+      <if test="scopeLabIds != null and scopeLabIds.size() > 0">
+        AND si.lab_id IN
+        <foreach collection="scopeLabIds" item="lid" open="(" separator="," close=")">
+          #{lid}
+        </foreach>
+      </if>
+    </where>
+    ORDER BY sr.id DESC
+  </select>
+</mapper>

@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lab.module.lab.mapper.LabDeviceRepairMapper">
+  <resultMap id="RepairMap" type="com.lab.module.lab.entity.LabDeviceRepair">
+    <id column="id" property="id"/>
+    <result column="device_id"    property="deviceId"/>
+    <result column="reporter_id"  property="reporterId"/>
+    <result column="fault_desc"   property="faultDesc"/>
+    <result column="handler_id"   property="handlerId"/>
+    <result column="handle_note"  property="handleNote"/>
+    <result column="status"       property="status"/>
+    <result column="report_time"  property="reportTime"/>
+    <result column="finish_time"  property="finishTime"/>
+    <result column="device_name"  property="deviceName"/>
+    <result column="asset_no"     property="assetNo"/>
+    <result column="reporter_name" property="reporterName"/>
+    <result column="handler_name"  property="handlerName"/>
+    <result column="lab_name"     property="labName"/>
+  </resultMap>
+
+  <sql id="base">
+    SELECT rep.*, d.name AS device_name, d.asset_no AS asset_no,
+      ur.real_name AS reporter_name, uh.real_name AS handler_name,
+      lr.name AS lab_name
+    FROM lab_device_repair rep
+    LEFT JOIN lab_device d  ON d.id = rep.device_id
+    LEFT JOIN lab_room lr   ON lr.id = d.lab_id
+    LEFT JOIN sys_user ur   ON ur.id = rep.reporter_id
+    LEFT JOIN sys_user uh   ON uh.id = rep.handler_id
+  </sql>
+
+  <select id="page" resultMap="RepairMap">
+    <include refid="base"/>
+    <where>
+      <if test="keyword != null and keyword != ''">
+        AND (d.name LIKE CONCAT('%',#{keyword},'%') OR d.asset_no LIKE CONCAT('%',#{keyword},'%'))
+      </if>
+      <if test="status != null">AND rep.status = #{status}</if>
+      <if test="deviceId != null">AND rep.device_id = #{deviceId}</if>
+      <if test="reporterId != null">AND rep.reporter_id = #{reporterId}</if>
+      <if test="scopeLabIds != null and scopeLabIds.size() > 0">
+        AND d.lab_id IN
+        <foreach collection="scopeLabIds" item="lid" open="(" separator="," close=")">
+          #{lid}
+        </foreach>
+      </if>
+    </where>
+    ORDER BY rep.id DESC
+  </select>
+
+  <select id="findById" resultMap="RepairMap">
+    <include refid="base"/>
+    WHERE rep.id = #{id}
+  </select>
+
+  <insert id="insert" parameterType="com.lab.module.lab.entity.LabDeviceRepair" useGeneratedKeys="true" keyProperty="id">
+    INSERT INTO lab_device_repair(device_id, reporter_id, fault_desc, status, report_time)
+    VALUES (#{deviceId}, #{reporterId}, #{faultDesc}, #{status}, #{reportTime})
+  </insert>
+
+  <update id="update" parameterType="com.lab.module.lab.entity.LabDeviceRepair">
+    UPDATE lab_device_repair
+    <set>
+      <if test="handlerId   != null">handler_id  = #{handlerId},</if>
+      <if test="handleNote  != null">handle_note = #{handleNote},</if>
+      <if test="status      != null">status      = #{status},</if>
+      <if test="finishTime  != null">finish_time = #{finishTime},</if>
+    </set>
+    WHERE id = #{id}
+  </update>
+
+  <delete id="deleteById">DELETE FROM lab_device_repair WHERE id = #{id}</delete>
+
+  <select id="findAll" resultMap="RepairMap">
+    <include refid="base"/>
+    <where>
+      <if test="scopeLabIds != null and scopeLabIds.size() > 0">
+        AND d.lab_id IN
+        <foreach collection="scopeLabIds" item="lid" open="(" separator="," close=")">
+          #{lid}
+        </foreach>
+      </if>
+    </where>
+    ORDER BY rep.id DESC
+  </select>
+
+  <select id="countByDeviceIdAndStatus" resultType="int">
+    SELECT COUNT(*) FROM lab_device_repair
+    WHERE device_id = #{deviceId} AND status IN (0, 1)
+  </select>
+</mapper>

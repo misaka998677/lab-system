@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lab.module.system.mapper.SysRoleMapper">
+  <select id="page" resultType="com.lab.module.system.entity.SysRole">
+    SELECT id, role_code AS roleCode, role_name AS roleName, sort_no AS sortNo, status, remark, create_time AS createTime, update_time AS updateTime, deleted
+    FROM sys_role
+    <where>
+      deleted = 0
+      <if test="keyword != null and keyword != ''">
+        AND (role_code LIKE CONCAT('%',#{keyword},'%') OR role_name LIKE CONCAT('%',#{keyword},'%'))
+      </if>
+    </where>
+    ORDER BY sort_no, id
+  </select>
+
+  <select id="all" resultType="com.lab.module.system.entity.SysRole">
+    SELECT id, role_code AS roleCode, role_name AS roleName, sort_no AS sortNo, status, remark, create_time AS createTime, update_time AS updateTime, deleted
+    FROM sys_role WHERE deleted = 0 AND status = 1 ORDER BY sort_no
+  </select>
+
+  <select id="findById" resultType="com.lab.module.system.entity.SysRole">
+    SELECT id, role_code AS roleCode, role_name AS roleName, sort_no AS sortNo, status, remark, create_time AS createTime, update_time AS updateTime, deleted
+    FROM sys_role WHERE id = #{id}
+  </select>
+
+  <select id="findIdByRoleCode" resultType="long">
+    SELECT id FROM sys_role WHERE role_code = #{roleCode} AND deleted = 0 AND status = 1 LIMIT 1
+  </select>
+
+  <insert id="insert" parameterType="com.lab.module.system.entity.SysRole" useGeneratedKeys="true" keyProperty="id">
+    INSERT INTO sys_role(role_code, role_name, sort_no, status, remark)
+    VALUES (#{roleCode},#{roleName},#{sortNo},#{status},#{remark})
+  </insert>
+
+  <update id="update" parameterType="com.lab.module.system.entity.SysRole">
+    UPDATE sys_role SET role_code=#{roleCode}, role_name=#{roleName},
+      sort_no=#{sortNo}, status=#{status}, remark=#{remark} WHERE id=#{id}
+  </update>
+
+  <update id="deleteById">UPDATE sys_role SET deleted = 1 WHERE id = #{id}</update>
+
+  <select id="findMenuIds" resultType="long">
+    SELECT menu_id FROM sys_role_menu WHERE role_id = #{roleId}
+  </select>
+
+  <delete id="deleteRoleMenus">DELETE FROM sys_role_menu WHERE role_id = #{roleId}</delete>
+
+  <insert id="insertRoleMenus">
+    INSERT INTO sys_role_menu(role_id, menu_id) VALUES
+    <foreach collection="menuIds" item="m" separator=",">(#{roleId}, #{m})</foreach>
+  </insert>
+</mapper>

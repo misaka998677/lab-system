@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lab.module.lab.mapper.LabDeviceMapper">
+  <resultMap id="DevMap" type="com.lab.module.lab.entity.LabDevice">
+    <id column="id" property="id"/>
+    <result column="asset_no"      property="assetNo"/>
+    <result column="name"          property="name"/>
+    <result column="category"      property="category"/>
+    <result column="brand"         property="brand"/>
+    <result column="model"         property="model"/>
+    <result column="lab_id"        property="labId"/>
+    <result column="purchase_date" property="purchaseDate"/>
+    <result column="price"         property="price"/>
+    <result column="status"        property="status"/>
+    <result column="remark"        property="remark"/>
+    <result column="lab_name"      property="labName"/>
+    <result column="manager_name"  property="managerName"/>
+  </resultMap>
+
+  <sql id="base">
+    SELECT d.*, r.name AS lab_name, u.real_name AS manager_name FROM lab_device d
+    LEFT JOIN lab_room r ON r.id = d.lab_id
+    LEFT JOIN sys_user u ON u.id = r.manager_id
+  </sql>
+
+  <select id="page" resultMap="DevMap">
+    <include refid="base"/>
+    <where>
+      d.deleted = 0
+      <if test="keyword != null and keyword != ''">
+        AND (d.asset_no LIKE CONCAT('%',#{keyword},'%') OR d.name LIKE CONCAT('%',#{keyword},'%'))
+      </if>
+      <if test="labId != null">AND d.lab_id = #{labId}</if>
+      <if test="category != null and category != ''">AND d.category = #{category}</if>
+      <if test="status != null">AND d.status = #{status}</if>
+      <if test="scopeLabIds != null and scopeLabIds.size() > 0">
+        AND d.lab_id IN
+        <foreach collection="scopeLabIds" item="lid" open="(" separator="," close=")">
+          #{lid}
+        </foreach>
+      </if>
+    </where>
+    ORDER BY d.id DESC
+  </select>
+
+  <select id="findByLab" resultMap="DevMap">
+    <include refid="base"/>
+    WHERE d.deleted = 0 AND d.lab_id = #{labId} ORDER BY d.id
+  </select>
+
+  <select id="findById" resultMap="DevMap">
+    <include refid="base"/>
+    WHERE d.id = #{id}
+  </select>
+
+  <insert id="insert" parameterType="com.lab.module.lab.entity.LabDevice" useGeneratedKeys="true" keyProperty="id">
+    INSERT INTO lab_device(asset_no,name,category,brand,model,lab_id,purchase_date,price,status,remark)
+    VALUES (#{assetNo},#{name},#{category},#{brand},#{model},#{labId},#{purchaseDate},#{price},#{status},#{remark})
+  </insert>
+
+  <update id="update" parameterType="com.lab.module.lab.entity.LabDevice">
+    UPDATE lab_device SET asset_no=#{assetNo}, name=#{name}, category=#{category},
+      brand=#{brand}, model=#{model}, lab_id=#{labId}, purchase_date=#{purchaseDate},
+      price=#{price}, status=#{status}, remark=#{remark}
+    WHERE id=#{id}
+  </update>
+
+  <update id="deleteById">UPDATE lab_device SET deleted = 1 WHERE id = #{id}</update>
+  <update id="updateStatus">UPDATE lab_device SET status = #{status} WHERE id = #{id}</update>
+
+  <select id="findAll" resultMap="DevMap">
+    <include refid="base"/>
+    <where>
+      d.deleted = 0
+      <if test="scopeLabIds != null and scopeLabIds.size() > 0">
+        AND d.lab_id IN
+        <foreach collection="scopeLabIds" item="lid" open="(" separator="," close=")">
+          #{lid}
+        </foreach>
+      </if>
+    </where>
+    ORDER BY d.id DESC
+  </select>
+</mapper>

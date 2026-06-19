@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lab.module.reserve.mapper.ReservationMapper">
+  <resultMap id="ResMap" type="com.lab.module.reserve.entity.Reservation">
+    <id column="id" property="id"/>
+    <result column="reserve_no"   property="reserveNo"/>
+    <result column="user_id"      property="userId"/>
+    <result column="teacher_id"   property="teacherId"/>
+    <result column="lab_id"       property="labId"/>
+    <result column="device_ids"   property="deviceIds"/>
+    <result column="purpose"      property="purpose"/>
+    <result column="start_time"   property="startTime"/>
+    <result column="end_time"     property="endTime"/>
+    <result column="status"       property="status"/>
+    <result column="audit_user_id" property="auditUserId"/>
+    <result column="audit_time"   property="auditTime"/>
+    <result column="audit_note"   property="auditNote"/>
+    <result column="check_in_time"  property="checkInTime"/>
+    <result column="check_out_time" property="checkOutTime"/>
+    <result column="user_name"      property="userName"/>
+    <result column="teacher_name"   property="teacherName"/>
+    <result column="lab_name"       property="labName"/>
+    <result column="audit_user_name" property="auditUserName"/>
+  </resultMap>
+
+  <sql id="base">
+    SELECT r.*, u.real_name AS user_name, t.real_name AS teacher_name,
+      lr.name AS lab_name, au.real_name AS audit_user_name
+    FROM lab_reservation r
+    LEFT JOIN sys_user u  ON u.id  = r.user_id
+    LEFT JOIN sys_user t  ON t.id  = r.teacher_id
+    LEFT JOIN sys_user au ON au.id = r.audit_user_id
+    LEFT JOIN lab_room lr ON lr.id = r.lab_id
+  </sql>
+
+  <select id="page" resultMap="ResMap">
+    <include refid="base"/>
+    <where>
+      r.deleted = 0
+      <if test="keyword != null and keyword != ''">
+        AND (r.reserve_no LIKE CONCAT('%',#{keyword},'%') OR r.purpose LIKE CONCAT('%',#{keyword},'%'))
+      </if>
+      <if test="userId != null">AND r.user_id = #{userId}</if>
+      <if test="labId  != null">AND r.lab_id  = #{labId}</if>
+      <if test="status != null">AND r.status  = #{status}</if>
+      <if test="start  != null">AND r.start_time &gt;= #{start}</if>
+      <if test="end    != null">AND r.start_time &lt;= #{end}</if>
+      <if test="scopeLabIds != null and scopeLabIds.size() > 0">
+        AND r.lab_id IN
+        <foreach collection="scopeLabIds" item="lid" open="(" separator="," close=")">
+          #{lid}
+        </foreach>
+      </if>
+    </where>
+    ORDER BY r.id DESC
+  </select>
+
+  <select id="checkRecords" resultMap="ResMap">
+    <include refid="base"/>
+    WHERE r.deleted = 0
+      AND r.status IN (3, 4)
+      <if test="userId != null">
+        AND (r.user_id = #{userId} OR r.teacher_id = #{userId})
+      </if>
+      <if test="scopeLabIds != null and scopeLabIds.size() > 0">
+        AND r.lab_id IN
+        <foreach collection="scopeLabIds" item="lid" open="(" separator="," close=")">
+          #{lid}
+        </foreach>
+      </if>
+    ORDER BY r.check_in_time DESC, r.id DESC
+  </select>
+
+  <select id="findById" resultMap="ResMap">
+    <include refid="base"/>
+    WHERE r.id = #{id}
+  </select>
+
+  <!-- 防冲突：同一实验室、状态非取消/驳回，时间区间重叠 -->
+  <select id="countConflict" resultType="int">
+    SELECT COUNT(1) FROM lab_reservation
+    WHERE deleted = 0
+      AND lab_id  = #{labId}
+      AND status NOT IN (2, 5)
+      AND start_time &lt; #{end}
+      AND end_time   &gt; #{start}
+      <if test="excludeId != null">AND id &lt;&gt; #{excludeId}</if>
+  </select>
+
+  <insert id="insert" parameterType="com.lab.module.reserve.entity.Reservation" useGeneratedKeys="true" keyProperty="id">
+    INSERT INTO lab_reservation(reserve_no,user_id,teacher_id,lab_id,device_ids,purpose,start_time,end_time,status)
+    VALUES (#{reserveNo},#{userId},#{teacherId},#{labId},#{deviceIds},#{purpose},#{startTime},#{endTime},#{status})
+  </insert>
+
+  <update id="update" parameterType="com.lab.module.reserve.entity.Reservation">
+    UPDATE lab_reservation
+    <set>
+      <if test="teacherId != null">teacher_id = #{teacherId},</if>
+      <if test="labId     != null">lab_id     = #{labId},</if>
+      <if test="deviceIds != null">device_ids = #{deviceIds},</if>
+      <if test="purpose   != null">purpose    = #{purpose},</if>
+      <if test="startTime != null">start_time = #{startTime},</if>
+      <if test="endTime   != null">end_time   = #{endTime},</if>
+      <if test="status    != null">status     = #{status},</if>
+    </set>
+    WHERE id = #{id}
+  </update>
+
+  <update id="deleteById">UPDATE lab_reservation SET deleted = 1 WHERE id = #{id}</update>
+
+  <update id="updateStatus">
+    UPDATE lab_reservation SET status = #{status}, audit_user_id = #{auditUserId},
+      audit_time = NOW(), audit_note = #{auditNote}
+    WHERE id = #{id}
+  </update>
+
+  <update id="checkIn">UPDATE lab_reservation SET status = 3, check_in_time = #{time} WHERE id = #{id}</update>
+  <update id="checkOut">UPDATE lab_reservation SET status = 4, check_out_time = #{time} WHERE id = #{id}</update>
+
+  <select id="findPendingTimeoutIds" resultType="java.lang.Long">
+    SELECT id FROM lab_reservation WHERE deleted = 0 AND status = 0 AND create_time &lt; #{cutoff}
+  </select>
+  <select id="findNoCheckInIds" resultType="java.lang.Long">
+    SELECT id FROM lab_reservation WHERE deleted = 0 AND status = 1 AND check_in_time IS NULL AND start_time &lt; #{cutoff}
+  </select>
+  <select id="findNoCheckOutIds" resultType="java.lang.Long">
+    SELECT id FROM lab_reservation WHERE deleted = 0 AND status = 3 AND check_out_time IS NULL AND end_time &lt; #{cutoff}
+  </select>
+</mapper>

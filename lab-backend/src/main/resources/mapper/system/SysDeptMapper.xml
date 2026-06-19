@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lab.module.system.mapper.SysDeptMapper">
+  <select id="all" resultType="com.lab.module.system.entity.SysDept">
+    SELECT id, parent_id AS parentId, name, leader, phone, email, sort_no AS sortNo, status, create_time AS createTime
+    FROM sys_dept ORDER BY sort_no, id
+  </select>
+  <select id="findById" resultType="com.lab.module.system.entity.SysDept">
+    SELECT id, parent_id AS parentId, name, leader, phone, email, sort_no AS sortNo, status, create_time AS createTime
+    FROM sys_dept WHERE id = #{id}
+  </select>
+  <insert id="insert" parameterType="com.lab.module.system.entity.SysDept" useGeneratedKeys="true" keyProperty="id">
+    INSERT INTO sys_dept(parent_id,name,leader,phone,email,sort_no,status)
+    VALUES (#{parentId},#{name},#{leader},#{phone},#{email},#{sortNo},#{status})
+  </insert>
+  <update id="update" parameterType="com.lab.module.system.entity.SysDept">
+    UPDATE sys_dept SET parent_id=#{parentId},name=#{name},leader=#{leader},
+      phone=#{phone},email=#{email},sort_no=#{sortNo},status=#{status}
+    WHERE id=#{id}
+  </update>
+  <delete id="deleteById">DELETE FROM sys_dept WHERE id = #{id}</delete>
+</mapper>

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lab.module.lab.mapper.LabRoomMapper">
+  <resultMap id="RoomMap" type="com.lab.module.lab.entity.LabRoom">
+    <id column="id" property="id"/>
+    <result column="code"      property="code"/>
+    <result column="name"      property="name"/>
+    <result column="building"  property="building"/>
+    <result column="room_no"   property="roomNo"/>
+    <result column="capacity"  property="capacity"/>
+    <result column="dept_id"   property="deptId"/>
+    <result column="manager_id" property="managerId"/>
+    <result column="status"    property="status"/>
+    <result column="qr_code"   property="qrCode"/>
+    <result column="remark"    property="remark"/>
+    <result column="dept_name"    property="deptName"/>
+    <result column="manager_name" property="managerName"/>
+  </resultMap>
+
+  <sql id="base">
+    SELECT r.*, d.name AS dept_name, u.real_name AS manager_name
+    FROM lab_room r
+    LEFT JOIN sys_dept d ON d.id = r.dept_id
+    LEFT JOIN sys_user u ON u.id = r.manager_id
+  </sql>
+
+  <select id="page" resultMap="RoomMap">
+    <include refid="base"/>
+    <where>
+      r.deleted = 0
+      <if test="keyword != null and keyword != ''">
+        AND (r.code LIKE CONCAT('%',#{keyword},'%') OR r.name LIKE CONCAT('%',#{keyword},'%'))
+      </if>
+      <if test="deptId != null">AND r.dept_id = #{deptId}</if>
+      <if test="status != null">AND r.status = #{status}</if>
+      <if test="scopeLabIds != null and scopeLabIds.size() > 0">
+        AND r.id IN
+        <foreach collection="scopeLabIds" item="lid" open="(" separator="," close=")">
+          #{lid}
+        </foreach>
+      </if>
+    </where>
+    ORDER BY r.id DESC
+  </select>
+
+  <select id="all" resultMap="RoomMap">
+    <include refid="base"/>
+    WHERE r.deleted = 0 AND r.status = 1
+    <if test="scopeLabIds != null and scopeLabIds.size() > 0">
+      AND r.id IN
+      <foreach collection="scopeLabIds" item="lid" open="(" separator="," close=")">
+        #{lid}
+      </foreach>
+    </if>
+    ORDER BY r.id
+  </select>
+
+  <select id="findById" resultMap="RoomMap">
+    <include refid="base"/>
+    WHERE r.id = #{id}
+  </select>
+
+  <insert id="insert" parameterType="com.lab.module.lab.entity.LabRoom" useGeneratedKeys="true" keyProperty="id">
+    INSERT INTO lab_room(code,name,building,room_no,capacity,dept_id,manager_id,status,qr_code,remark)
+    VALUES (#{code},#{name},#{building},#{roomNo},#{capacity},#{deptId},#{managerId},#{status},#{qrCode},#{remark})
+  </insert>
+
+  <update id="update" parameterType="com.lab.module.lab.entity.LabRoom">
+    UPDATE lab_room SET code=#{code}, name=#{name}, building=#{building}, room_no=#{roomNo},
+      capacity=#{capacity}, dept_id=#{deptId}, manager_id=#{managerId}, status=#{status},
+      qr_code=#{qrCode}, remark=#{remark}
+    WHERE id=#{id}
+  </update>
+
+  <update id="deleteById">UPDATE lab_room SET deleted = 1 WHERE id = #{id}</update>
+</mapper>

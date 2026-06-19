@@ -1,0 +1,51 @@
+spring:
+  application:
+    name: lab-system
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/lab_system?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: 123456
+
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+    default-property-inclusion: non_null
+
+server:
+  port: 9090
+  servlet:
+    context-path: /api
+
+mybatis:
+  mapper-locations: classpath:mapper/**/*.xml
+  type-aliases-package: com.lab.module.**.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    cache-enabled: false
+
+pagehelper:
+  helper-dialect: mysql
+  reasonable: true
+  support-methods-arguments: true
+  params: count=countSql
+
+lab:
+  api:
+    version: v1
+  jwt:
+    secret: bGFicy1zeXN0ZW0tanV3dC1zZWNyZXQta2V5LWZvci1obWFjLXNoYTI1Ni1lbmM=
+    expire: 86400
+    header: Authorization
+    prefix: "Bearer "
+  data-scope:
+    enabled: true
+  ws:
+    url: ws://localhost:9090/api/ws
+
+logging:
+  level:
+    com.lab: debug
+    org.springframework.security: warn

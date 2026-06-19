@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lab.module.system.mapper.SysMenuMapper">
+  <select id="all" resultType="com.lab.module.system.entity.SysMenu">
+    SELECT id, parent_id AS parentId, name, path, component, icon, perm, type, sort_no AS sortNo, visible
+    FROM sys_menu ORDER BY sort_no, id
+  </select>
+
+  <select id="findByUserId" resultType="com.lab.module.system.entity.SysMenu">
+    SELECT DISTINCT m.id, m.parent_id AS parentId, m.name, m.path, m.component, m.icon, m.perm, m.type, m.sort_no AS sortNo, m.visible
+    FROM sys_menu m
+      JOIN sys_role_menu rm ON rm.menu_id = m.id
+      JOIN sys_user_role ur ON ur.role_id = rm.role_id
+    WHERE ur.user_id = #{userId} AND m.visible = 1 AND m.type IN (1,2)
+    ORDER BY m.sort_no, m.id
+  </select>
+
+  <select id="findById" resultType="com.lab.module.system.entity.SysMenu">
+    SELECT id, parent_id AS parentId, name, path, component, icon, perm, type, sort_no AS sortNo, visible
+    FROM sys_menu WHERE id = #{id}
+  </select>
+
+  <insert id="insert" parameterType="com.lab.module.system.entity.SysMenu" useGeneratedKeys="true" keyProperty="id">
+    INSERT INTO sys_menu(parent_id,name,path,component,icon,perm,type,sort_no,visible)
+    VALUES (#{parentId},#{name},#{path},#{component},#{icon},#{perm},#{type},#{sortNo},#{visible})
+  </insert>
+
+  <update id="update" parameterType="com.lab.module.system.entity.SysMenu">
+    UPDATE sys_menu SET parent_id=#{parentId}, name=#{name}, path=#{path},
+      component=#{component}, icon=#{icon}, perm=#{perm}, type=#{type},
+      sort_no=#{sortNo}, visible=#{visible}
+    WHERE id = #{id}
+  </update>
+
+  <delete id="deleteById">DELETE FROM sys_menu WHERE id = #{id}</delete>
+</mapper>
