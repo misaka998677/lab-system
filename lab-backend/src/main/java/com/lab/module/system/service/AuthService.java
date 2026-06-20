@@ -18,8 +18,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,7 +27,6 @@ public class AuthService {
     private static final int MAX_FAILS = 5;
     /** 锁定时长（秒）。 */
     private static final int LOCK_SECONDS = 300;
-    private final Map<String, FailureEntry> failureMap = new ConcurrentHashMap<>();
 
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
@@ -46,19 +43,24 @@ public class AuthService {
 
     public Map<String, Object> login(String username, String password) {
         String key = username == null ? "" : username.trim().toLowerCase(Locale.ROOT);
-        // 1. 先检查是否被临时锁定
-        FailureEntry entry = failureMap.get(key);
-        if (entry != null && entry.isLocked()) {
-            long wait = entry.remainSeconds();
+        SysUser user = userMapper.findByUsername(key);
+
+        // 1. 检查是否被临时锁定（集群共享）
+        if (user != null && user.getLockedUntil() != null
+                && user.getLockedUntil().isAfter(java.time.LocalDateTime.now())) {
+            long wait = java.time.Duration.between(java.time.LocalDateTime.now(), user.getLockedUntil()).getSeconds();
             throw new BizException(400, "账号或密码错误次数过多，请 " + wait + " 秒后再试");
         }
+
         try {
             Authentication auth = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(username, password));
             LoginUser u = (LoginUser) auth.getPrincipal();
+
+            // 登录成功：重置失败计数（集群共享）
+            userMapper.updateFailInfo(u.getUser().getId(), 0, null, null);
+
             String token = jwtService.issue(u.getUser().getId(), u.getUsername());
-            // 登录成功：清理失败计数
-            failureMap.remove(key);
             Map<String, Object> data = new HashMap<>();
             data.put("token", token);
             data.put("username", u.getUsername());
@@ -68,18 +70,37 @@ public class AuthService {
         } catch (DisabledException e) {
             throw new BizException(401, "账号待审核或已禁用，请联系管理员");
         } catch (BadCredentialsException e) {
-            // 登录失败：累计失败次数
-            failureMap.compute(key, (k, old) -> {
-                FailureEntry cur = old == null ? new FailureEntry() : old;
-                cur.onFail();
-                return cur;
-            });
-            int remain = MAX_FAILS - failureMap.get(key).failCount;
-            if (remain <= 0) {
-                throw new BizException(400, "尝试次数过多，请 " + LOCK_SECONDS + " 秒后再试");
+            // 登录失败：更新数据库中的失败计数（集群共享）
+            if (user != null) {
+                int failCount = (user.getFailCount() == null ? 0 : user.getFailCount());
+                java.time.LocalDateTime now = java.time.LocalDateTime.now();
+                java.time.LocalDateTime firstFailAt = user.getFirstFailAt();
+
+                if (firstFailAt == null || isExpired(firstFailAt, LOCK_SECONDS)) {
+                    failCount = 1;
+                    firstFailAt = now;
+                } else {
+                    failCount += 1;
+                }
+
+                int locked = 0;
+                java.time.LocalDateTime lockedUntil = null;
+                if (failCount >= MAX_FAILS) {
+                    lockedUntil = now.plusSeconds(LOCK_SECONDS);
+                    locked = 1;
+                    userMapper.updateFailInfo(user.getId(), failCount, firstFailAt, lockedUntil);
+                    throw new BizException(400, "尝试次数过多，请 " + LOCK_SECONDS + " 秒后再试");
+                } else {
+                    userMapper.updateFailInfo(user.getId(), failCount, firstFailAt, lockedUntil);
+                }
+                throw new BizException(401, "账号或密码错误（还可尝试 " + (MAX_FAILS - failCount) + " 次）");
             }
-            throw new BizException(401, "账号或密码错误（还可尝试 " + remain + " 次）");
+            throw new BizException(401, "账号或密码错误");
         }
+    }
+
+    private boolean isExpired(java.time.LocalDateTime firstFailAt, int lockSeconds) {
+        return java.time.Duration.between(firstFailAt, java.time.LocalDateTime.now()).getSeconds() >= lockSeconds;
     }
 
     public String register(RegisterDTO dto) {
@@ -91,6 +112,12 @@ public class AuthService {
         }
         if (password.length() < 6) {
             throw new BizException(400, "密码至少 6 位");
+        }
+        // 密码复杂度：至少包含数字和字母中的任意一种
+        boolean hasDigit = password.chars().anyMatch(Character::isDigit);
+        boolean hasLetter = password.chars().anyMatch(Character::isLetter);
+        if (!hasDigit || !hasLetter) {
+            throw new BizException(400, "密码必须同时包含数字和字母");
         }
         if (!Objects.equals(password, dto.getConfirmPassword())) {
             throw new BizException(400, "两次输入的密码不一致");
@@ -168,30 +195,5 @@ public class AuthService {
                 .filter(m -> Objects.equals(m.getParentId(), parentId))
                 .peek(m -> m.setChildren(buildTree(all, m.getId())))
                 .collect(Collectors.toList());
-    }
-
-    /** 仅内部使用的失败计数对象，不暴露到外部。 */
-    private static final class FailureEntry {
-        int failCount;
-        long firstFailAt;
-        synchronized void onFail() {
-            if (failCount == 0 || isExpired()) {
-                failCount = 1;
-                firstFailAt = System.currentTimeMillis();
-            } else {
-                failCount += 1;
-            }
-        }
-        synchronized boolean isLocked() {
-            return failCount >= MAX_FAILS && !isExpired();
-        }
-        synchronized long remainSeconds() {
-            long elapsed = (System.currentTimeMillis() - firstFailAt) / 1000;
-            long remain = LOCK_SECONDS - elapsed;
-            return remain > 0 ? remain : 0;
-        }
-        private boolean isExpired() {
-            return (System.currentTimeMillis() - firstFailAt) > TimeUnit.SECONDS.toMillis(LOCK_SECONDS);
-        }
     }
 }

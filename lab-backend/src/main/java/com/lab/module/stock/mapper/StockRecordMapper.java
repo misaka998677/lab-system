@@ -15,6 +15,9 @@ public interface StockRecordMapper {
 
     int insert(StockRecord record);
 
+    /** 检查指定耗材是否有出入库记录。 */
+    int countByItemId(@Param("itemId") Long itemId);
+
     /** 入库总量（统计用）。 */
     Integer sumInQty(@Param("scopeLabIds") List<Long> scopeLabIds);
 

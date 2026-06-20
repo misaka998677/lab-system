@@ -9,6 +9,8 @@ import com.lab.module.lab.entity.LabDevice;
 import com.lab.module.lab.entity.LabDeviceRepair;
 import com.lab.module.lab.mapper.LabDeviceMapper;
 import com.lab.module.lab.mapper.LabDeviceRepairMapper;
+import com.lab.module.system.entity.SysLog;
+import com.lab.module.system.service.SysLogService;
 import com.lab.security.DataScopeUtil;
 import com.lab.security.LoginUser;
 import com.lab.security.SecurityUtil;
@@ -26,10 +28,12 @@ public class LabDeviceRepairService {
     private final LabDeviceRepairMapper repairMapper;
     private final LabDeviceMapper       deviceMapper;
     private final StatPushService       statPushService;
+    private final SysLogService        sysLogService;
 
     @Autowired
-    public LabDeviceRepairService(LabDeviceRepairMapper r, LabDeviceMapper d, @Lazy StatPushService sps) {
-        this.repairMapper = r; this.deviceMapper = d; this.statPushService = sps;
+    public LabDeviceRepairService(LabDeviceRepairMapper r, LabDeviceMapper d,
+                                   @Lazy StatPushService sps, @Lazy SysLogService sls) {
+        this.repairMapper = r; this.deviceMapper = d; this.statPushService = sps; this.sysLogService = sls;
     }
 
     public PageResult<LabDeviceRepair> page(int pageNum, int pageSize,
@@ -118,12 +122,28 @@ public class LabDeviceRepairService {
         u.setHandlerId(handlerId == null ? user.getUser().getId() : handlerId);
         u.setHandleNote(note);
         u.setStatus(status);
+        // 已完成：记录完成时间，设备恢复为在用
         if (status != null && status == 2) {
             u.setFinishTime(LocalDateTime.now());
             deviceMapper.updateStatus(r.getDeviceId(), 1);
         }
+        // 已驳回：维修申请被拒绝，设备无需维修，恢复为在用
+        if (status != null && status == 3) {
+            deviceMapper.updateStatus(r.getDeviceId(), 1);
+        }
         repairMapper.update(u);
         statPushService.pushOverviewUpdate();
+
+        // 记录操作日志
+        SysLog log = new SysLog();
+        log.setUserId(user.getUser().getId());
+        log.setUsername(user.getUsername());
+        log.setModule("维修工单");
+        log.setAction(status != null && status == 2 ? "完成维修" : status != null && status == 3 ? "驳回维修" : "处理维修");
+        log.setMethod("LabDeviceRepairService.handle");
+        log.setParams("id=" + id + ", handlerId=" + user.getUser().getId() + ", note=" + note + ", status=" + status);
+        log.setStatus(1);
+        sysLogService.asyncSave(log);
     }
 
     public void delete(Long id) {
@@ -132,9 +152,15 @@ public class LabDeviceRepairService {
         boolean isLabAdmin = DataScopeUtil.isLabAdmin();
         if (!isAdmin && !isLabAdmin) throw new BizException(403, "仅管理员可删除维修单");
 
+        LabDeviceRepair r = repairMapper.findById(id);
+        if (r == null) throw new BizException("维修单不存在");
+
+        // 仅已完成或已驳回的维修单可删除，防止进行中的维修单被误删导致设备状态不一致
+        if (r.getStatus() != 2 && r.getStatus() != 3) {
+            throw new BizException("仅已完成或已驳回的维修单可删除");
+        }
+
         if (isLabAdmin) {
-            LabDeviceRepair r = repairMapper.findById(id);
-            if (r == null) throw new BizException("维修单不存在");
             LabDevice d = deviceMapper.findById(r.getDeviceId());
             if (d == null) throw new BizException("设备不存在");
             List<Long> myLabs = DataScopeUtil.getLabIdsForLabAdmin();

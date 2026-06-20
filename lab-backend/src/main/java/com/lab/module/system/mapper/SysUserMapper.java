@@ -19,6 +19,10 @@ public interface SysUserMapper {
     int deleteById(@Param("id") Long id);
     int updateStatus(@Param("id") Long id, @Param("status") Integer status);
     int updatePassword(@Param("id") Long id, @Param("password") String password);
+    int updateFailInfo(@Param("id") Long id,
+                       @Param("failCount") Integer failCount,
+                       @Param("firstFailAt") java.time.LocalDateTime firstFailAt,
+                       @Param("lockedUntil") java.time.LocalDateTime lockedUntil);
 
     List<String> findRoleCodes(@Param("userId") Long userId);
     List<String> findPermsByUserId(@Param("userId") Long userId);

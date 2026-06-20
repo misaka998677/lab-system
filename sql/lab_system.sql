@@ -28,6 +28,9 @@ CREATE TABLE sys_user (
   create_time  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   update_time  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   deleted      TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+  fail_count   INT                  DEFAULT 0 COMMENT '登录失败次数（集群共享）',
+  first_fail_at DATETIME             DEFAULT NULL COMMENT '首次失败时间（集群共享）',
+  locked_until DATETIME             DEFAULT NULL COMMENT '锁定截止时间（集群共享）',
   PRIMARY KEY (id),
   UNIQUE KEY uk_username (username)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '系统用户';

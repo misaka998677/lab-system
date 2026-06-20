@@ -20,6 +20,13 @@ public class SysUser {
     private LocalDateTime updateTime;
     private Integer deleted;
 
+    /** 登录失败计数（集群共享） */
+    private Integer failCount;
+    /** 首次失败时间（集群共享） */
+    private LocalDateTime firstFailAt;
+    /** 锁定截止时间（集群共享） */
+    private LocalDateTime lockedUntil;
+
     /** 关联角色 id 列表，仅查询使用 */
     private java.util.List<Long> roleIds;
     private String deptName;

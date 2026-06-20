@@ -34,7 +34,7 @@
         <el-tag size="mini" :type="statusType(row.status)">{{ statusText(row.status) }}</el-tag>
       </template>
       <template slot="actions" slot-scope="{ row }">
-        <el-button size="mini" type="warning" v-if="row.status === 0" @click="onCancel(row)">取消</el-button>
+        <el-button size="mini" type="warning" v-if="row.status === 0 || row.status === 1 || row.status === 3" @click="onCancel(row)">取消</el-button>
         <el-button size="mini" type="primary" v-if="row.status === 1 && canCheckIn(row)" @click="onCheckIn(row)">签到</el-button>
         <el-button size="mini" type="success" v-if="row.status === 3 && canCheckOut(row)" @click="onCheckOut(row)">签退</el-button>
         <span v-if="row.status === 1 && !canCheckIn(row)" style="color:#909399; font-size:12px">时段外不可签到</span>
@@ -140,9 +140,21 @@ export default {
       } finally { this.formLoading = false }
     },
     onCancel(row) {
-      this.$confirm('确认取消此次预约？', '提示', { type: 'warning' })
-        .then(async () => { try { await reserveCancel(row.id); this.$message.success('已取消'); this.reload() } catch (e) {} })
-        .catch(() => {})
+      if (row.status === 3) {
+        // 已签到必须填写原因
+        this.$prompt('已签到的预约取消时必须填写原因', '取消预约', {
+          confirmButtonText: '确认取消',
+          cancelButtonText: '返回',
+          inputPattern: /\S+/,
+          inputErrorMessage: '取消原因不能为空'
+        }).then(async ({ value }) => {
+          try { await reserveCancel(row.id, value); this.$message.success('已取消'); this.reload() } catch (e) {}
+        }).catch(() => {})
+      } else {
+        this.$confirm('确认取消此次预约？', '提示', { type: 'warning' })
+          .then(async () => { try { await reserveCancel(row.id); this.$message.success('已取消'); this.reload() } catch (e) {} })
+          .catch(() => {})
+      }
     },
     async onCheckIn(row) { try { await reserveCheckIn(row.id); this.$message.success('已签到'); this.reload() } catch (e) {} },
     async onCheckOut(row) { try { await reserveCheckOut(row.id); this.$message.success('已签退'); this.reload() } catch (e) {} }

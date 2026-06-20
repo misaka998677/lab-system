@@ -6,7 +6,7 @@ export const reserveCheckRecords = p => request.get('/reserve/check-records', { 
 export const reserveDetail = id => request.get(`/reserve/${id}`)
 export const reserveApply = d => request.post('/reserve', d)
 export const reserveUpdate = d => request.put('/reserve', d)
-export const reserveCancel = id => request.put(`/reserve/${id}/cancel`)
+export const reserveCancel = (id, reason) => request.put(`/reserve/${id}/cancel`, null, reason ? { params: { reason } } : {})
 export const reserveAudit = (id, params) => request.put(`/reserve/${id}/audit`, null, { params })
 export const reserveCheckIn = id => request.put(`/reserve/${id}/check-in`)
 export const reserveCheckOut = id => request.put(`/reserve/${id}/check-out`)

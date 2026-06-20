@@ -14,6 +14,8 @@ import com.lab.module.lab.entity.LabRoom;
 import com.lab.module.lab.mapper.LabRoomMapper;
 import com.lab.module.stock.mapper.StockItemMapper;
 import com.lab.module.stock.mapper.StockRecordMapper;
+import com.lab.module.system.entity.SysLog;
+import com.lab.module.system.service.SysLogService;
 import com.lab.security.DataScopeUtil;
 import com.lab.security.LoginUser;
 import com.lab.security.SecurityUtil;
@@ -36,14 +38,16 @@ public class StockService {
     private final StockRecordMapper recordMapper;
     private final LabRoomMapper roomMapper;
     private final StatPushService statPushService;
+    private final SysLogService sysLogService;
 
     @Autowired
     public StockService(StockItemMapper itemMapper, StockRecordMapper recordMapper,
-                        LabRoomMapper roomMapper, @Lazy StatPushService sps) {
+                        LabRoomMapper roomMapper, @Lazy StatPushService sps, @Lazy SysLogService sls) {
         this.itemMapper = itemMapper;
         this.recordMapper = recordMapper;
         this.roomMapper = roomMapper;
         this.statPushService = sps;
+        this.sysLogService = sls;
     }
 
     // ---------------- 档案 ----------------
@@ -100,9 +104,16 @@ public class StockService {
     }
 
     public void delete(Long id) {
+        StockItem existing = itemMapper.findById(id);
+        if (existing == null) throw new BizException("耗材不存在");
+
+        // 删除前检查：若有出入库记录，不允许删除（防止统计数据丢失）
+        int recordCount = recordMapper.countByItemId(id);
+        if (recordCount > 0) {
+            throw new BizException("该耗材已有 " + recordCount + " 条出入库记录，无法删除");
+        }
+
         if (DataScopeUtil.isLabAdmin()) {
-            StockItem existing = itemMapper.findById(id);
-            if (existing == null) throw new BizException("耗材不存在");
             List<Long> myLabs = DataScopeUtil.getLabIdsForLabAdmin();
             if (existing.getLabId() == null || !myLabs.contains(existing.getLabId())) {
                 throw new BizException(403, "无权删除其他实验室的耗材");
@@ -224,6 +235,9 @@ public class StockService {
         StockRecord rec = buildRecord(dto, 1);
         recordMapper.insert(rec);
         statPushService.pushOverviewUpdate();
+
+        // 记录操作日志
+        saveStockLog("耗材入库", "入库", dto.getItemId(), dto.getQty(), 1);
         return rec.getId();
     }
 
@@ -239,7 +253,22 @@ public class StockService {
         StockRecord rec = buildRecord(dto, 2);
         recordMapper.insert(rec);
         statPushService.pushOverviewUpdate();
+
+        // 记录操作日志
+        saveStockLog("耗材出库", "出库", dto.getItemId(), dto.getQty(), 2);
         return rec.getId();
+    }
+
+    private void saveStockLog(String module, String action, Long itemId, Integer qty, int type) {
+        SysLog log = new SysLog();
+        log.setUserId(SecurityUtil.currentUserId());
+        log.setUsername(SecurityUtil.current() != null ? SecurityUtil.current().getUsername() : null);
+        log.setModule(module);
+        log.setAction(action);
+        log.setMethod("StockService." + (type == 1 ? "stockIn" : "stockOut"));
+        log.setParams("itemId=" + itemId + ", qty=" + qty);
+        log.setStatus(1);
+        sysLogService.asyncSave(log);
     }
 
     private StockItem validateForRecord(StockRecordDTO dto) {

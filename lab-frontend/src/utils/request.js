@@ -43,12 +43,25 @@ const service = axios.create({
   timeout: 15000
 })
 
+/** 从 JWT token 中解析 userId（payload base64 decode，不验证签名） */
+function getUserIdFromToken(token) {
+  if (!token) return null
+  try {
+    const parts = token.split('.')
+    if (parts.length < 2) return null
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')))
+    return payload.sub || null
+  } catch (e) { return null }
+}
+
 service.interceptors.request.use(cfg => {
   const t = getToken()
   if (t) cfg.headers['Authorization'] = 'Bearer ' + t
-  cfg.headers['X-Request-Id'] = (
-    Math.random().toString(36).slice(2) + Date.now().toString(36)
-  )
+  // 防重放唯一请求ID：时间戳 + 随机数，确保60秒窗口内几乎不可能重复
+  cfg.headers['X-Request-Id'] = Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
+  // 携带当前用户ID，供后端 ReplayGuardInterceptor 关联登录状态
+  const uid = getUserIdFromToken(t)
+  if (uid) cfg.headers['X-User-Id'] = uid
   addPending(cfg)
   return cfg
 })

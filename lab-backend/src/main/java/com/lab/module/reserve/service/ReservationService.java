@@ -9,6 +9,9 @@ import com.lab.common.PageResult;
 import com.lab.common.SqlLikeUtil;
 import com.lab.module.reserve.entity.Reservation;
 import com.lab.module.reserve.mapper.ReservationMapper;
+import com.lab.module.system.entity.SysLog;
+import com.lab.module.system.mapper.SysUserMapper;
+import com.lab.module.system.service.SysLogService;
 import com.lab.security.DataScopeUtil;
 import com.lab.security.SecurityUtil;
 import com.lab.websocket.StatPushService;
@@ -26,11 +29,16 @@ public class ReservationService {
 
     private final ReservationMapper reservationMapper;
     private final StatPushService statPushService;
+    private final SysLogService sysLogService;
+    private final SysUserMapper userMapper;
 
     @Autowired
-    public ReservationService(ReservationMapper m, @Lazy StatPushService sps) {
+    public ReservationService(ReservationMapper m, @Lazy StatPushService sps,
+                              @Lazy SysLogService sls, SysUserMapper um) {
         this.reservationMapper = m;
         this.statPushService = sps;
+        this.sysLogService = sls;
+        this.userMapper = um;
     }
 
     public PageResult<Reservation> page(int pageNum, int pageSize,
@@ -113,6 +121,12 @@ public class ReservationService {
                 || !r.getEndTime().isAfter(r.getStartTime())) {
             throw ErrorCode.RESERVATION_TIME_ILLEGAL.ex();
         }
+        // 预约开始时间不能早于当前时间
+        if (r.getStartTime().isBefore(LocalDateTime.now())) {
+            throw ErrorCode.RESERVATION_TIME_ILLEGAL.ex("预约开始时间不能早于当前时间");
+        }
+        // 实验室权限校验：LABADMIN/TEACHER 只能预约自己有权限的实验室
+        validateLabAccess(r.getLabId(), "预约");
         if (reservationMapper.countConflict(r.getLabId(), r.getStartTime(), r.getEndTime(), null) > 0) {
             throw ErrorCode.RESERVATION_TIME_CONFLICT.ex();
         }
@@ -129,7 +143,9 @@ public class ReservationService {
     public void update(Reservation r) {
         Reservation old = reservationMapper.findById(r.getId());
         if (old == null) throw ErrorCode.RESERVATION_NOT_FOUND.ex();
-        validateLabAccess(old.getLabId(), "修改");
+        // 校验权限：若改了实验室，用新 labId 校验；未改则用旧的
+        Long targetLabId = r.getLabId() != null ? r.getLabId() : old.getLabId();
+        validateLabAccess(targetLabId, "修改");
         requireOwner(old);
         if (old.getStatus() != 0) throw ErrorCode.RESERVATION_NOT_PENDING.ex();
         if (r.getStartTime() != null && r.getEndTime() != null
@@ -141,15 +157,33 @@ public class ReservationService {
         reservationMapper.update(r);
     }
 
-    public void cancel(Long id) {
+    public void cancel(Long id, String reason) {
         Reservation r = reservationMapper.findById(id);
         if (r == null) throw ErrorCode.RESERVATION_NOT_FOUND.ex();
         requireOwner(r);
-        if (r.getStatus() != 0 && r.getStatus() != 1) {
-            throw ErrorCode.STATUS_ILLEGAL.ex("仅待审核/已通过的预约可取消");
+        // 已签到时必须填写取消原因
+        if (r.getStatus() == 3) {
+            if (reason == null || reason.trim().isEmpty()) {
+                throw ErrorCode.STATUS_ILLEGAL.ex("已签到的预约取消时必须填写原因");
+            }
+            reservationMapper.updateStatus(id, 5, SecurityUtil.currentUserId(), "用户取消(已签到)：" + reason);
+        } else if (r.getStatus() == 0 || r.getStatus() == 1) {
+            reservationMapper.updateStatus(id, 5, SecurityUtil.currentUserId(), reason != null ? "用户取消：" + reason : "用户取消");
+        } else {
+            throw ErrorCode.STATUS_ILLEGAL.ex("当前状态不允许取消");
         }
-        reservationMapper.updateStatus(id, 5, SecurityUtil.currentUserId(), "用户取消");
         statPushService.pushOverviewUpdate();
+
+        // 记录操作日志
+        SysLog log = new SysLog();
+        log.setUserId(SecurityUtil.currentUserId());
+        log.setUsername(SecurityUtil.current() != null ? SecurityUtil.current().getUsername() : null);
+        log.setModule("预约管理");
+        log.setAction("取消预约");
+        log.setMethod("ReservationService.cancel");
+        log.setParams("id=" + id + ", reason=" + reason);
+        log.setStatus(1);
+        sysLogService.asyncSave(log);
     }
 
     @Transactional
@@ -164,12 +198,31 @@ public class ReservationService {
             if (r.getLabId() == null || !myLabs.contains(r.getLabId())) {
                 throw ErrorCode.FORBIDDEN.ex("无权审核其他实验室的预约");
             }
+            // 教师审核时，检查预约学生是否属于同一学院
+            if (DataScopeUtil.isTeacher()) {
+                Long teacherDeptId = DataScopeUtil.getCurrentDeptId();
+                Long studentDeptId = userMapper.findDeptIdByUserId(r.getUserId());
+                if (studentDeptId == null || !studentDeptId.equals(teacherDeptId)) {
+                    throw ErrorCode.FORBIDDEN.ex("无权审核其他学院学生的预约");
+                }
+            }
         } else if (!DataScopeUtil.isAdmin()) {
             throw ErrorCode.FORBIDDEN.ex();
         }
 
         reservationMapper.updateStatus(id, pass ? 1 : 2, SecurityUtil.currentUserId(), note);
         statPushService.pushOverviewUpdate();
+
+        // 记录操作日志
+        SysLog log = new SysLog();
+        log.setUserId(SecurityUtil.currentUserId());
+        log.setUsername(SecurityUtil.current() != null ? SecurityUtil.current().getUsername() : null);
+        log.setModule("预约审核");
+        log.setAction(pass ? "通过" : "驳回");
+        log.setMethod("ReservationService.audit");
+        log.setParams("id=" + id + ", pass=" + pass + ", note=" + note);
+        log.setStatus(1);
+        sysLogService.asyncSave(log);
     }
 
     public void checkIn(Long id) {
@@ -205,17 +258,20 @@ public class ReservationService {
     }
 
     /**
-     * 判断当前时间是否在预约时间段内
-     * 允许提前15分钟签到，允许延后30分钟签退（给用户一定的缓冲时间）
+     * 判断当前时间是否在预约时间段内（签到/签退有效窗口）
+     * 与 ReservationTimeoutService 保持一致：签入/签退均使用 30 分钟超时窗口
+     * - 签入有效窗口：预约开始时间前30分钟 ~ 预约开始时间后30分钟
+     * - 签退有效窗口：预约结束时间前30分钟 ~ 预约结束时间后30分钟
      */
     private boolean isInReservationTime(Reservation r, LocalDateTime now) {
         if (r.getStartTime() == null || r.getEndTime() == null) return false;
 
-        // 签入允许提前15分钟
-        LocalDateTime effectiveStart = r.getStartTime().minusMinutes(15);
-        // 签退允许延后30分钟
-        LocalDateTime effectiveEnd = r.getEndTime().plusMinutes(30);
+        // 签入：预约开始前后30分钟内可签入（与超时任务一致）
+        LocalDateTime effectiveStart = r.getStartTime().plusMinutes(30);
+        if (now.isAfter(effectiveStart)) return false;
 
-        return !now.isBefore(effectiveStart) && !now.isAfter(effectiveEnd);
+        // 签退：预约结束前后30分钟内可签退
+        LocalDateTime effectiveEnd = r.getEndTime().plusMinutes(30);
+        return !now.isAfter(effectiveEnd);
     }
 }

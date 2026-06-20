@@ -121,4 +121,20 @@ public class LabDeviceController {
             return Result.fail(500, e.getMessage());
         }
     }
+
+    /**
+     * 设备导入（异步版，支持进度查询）。
+     * 返回 taskId，前端轮询 GET /import-task/{taskId} 获取进度。
+     */
+    @PostMapping("/import-async")
+    @PreAuthorize("hasAnyRole('ADMIN','LABADMIN')")
+    public Result<String> importDevicesAsync(@RequestParam("file") MultipartFile file) {
+        if (file == null || file.isEmpty()) return Result.fail("请上传文件");
+        try {
+            String taskId = deviceService.importDevicesAsync(file.getInputStream());
+            return Result.ok("导入已开始", taskId);
+        } catch (Exception e) {
+            return Result.fail(500, e.getMessage());
+        }
+    }
 }

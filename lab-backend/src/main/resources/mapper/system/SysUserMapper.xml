@@ -19,6 +19,9 @@
     <result column="update_time" property="updateTime"/>
     <result column="dept_name"  property="deptName"/>
     <result column="role_names" property="roleNames"/>
+    <result column="fail_count"   property="failCount"/>
+    <result column="first_fail_at" property="firstFailAt"/>
+    <result column="locked_until"  property="lockedUntil"/>
   </resultMap>
 
   <sql id="cols">
@@ -26,7 +29,7 @@
   </sql>
 
   <select id="findByUsername" resultMap="UserMap">
-    SELECT <include refid="cols"/> FROM sys_user
+    SELECT <include refid="cols"/>,fail_count,first_fail_at,locked_until FROM sys_user
     WHERE deleted = 0 AND username = #{username}
   </select>
 
@@ -86,6 +89,15 @@
 
   <update id="updatePassword">
     UPDATE sys_user SET password = #{password} WHERE id = #{id}
+  </update>
+
+  <!-- 更新登录失败信息（集群共享） -->
+  <update id="updateFailInfo">
+    UPDATE sys_user
+    SET fail_count = #{failCount},
+        first_fail_at = #{firstFailAt},
+        locked_until = #{lockedUntil}
+    WHERE id = #{id}
   </update>
 
   <select id="findRoleCodes" resultType="string">

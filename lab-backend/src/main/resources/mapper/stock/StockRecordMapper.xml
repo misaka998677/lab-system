@@ -46,6 +46,10 @@
     VALUES (#{itemId}, #{type}, #{qty}, #{reservationId}, #{userId}, #{remark})
   </insert>
 
+  <select id="countByItemId" resultType="int">
+    SELECT COUNT(1) FROM stock_record WHERE item_id = #{itemId}
+  </select>
+
   <select id="sumInQty" resultType="java.lang.Integer">
     SELECT COALESCE(SUM(sr.qty), 0) FROM stock_record sr
     LEFT JOIN stock_item si ON si.id = sr.item_id

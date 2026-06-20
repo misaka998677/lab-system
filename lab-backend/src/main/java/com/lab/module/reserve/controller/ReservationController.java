@@ -77,8 +77,9 @@ public class ReservationController {
     }
 
     @PutMapping("/{id}/cancel")
-    public Result<?> cancel(@PathVariable Long id) {
-        reservationService.cancel(id);
+    public Result<?> cancel(@PathVariable Long id,
+                            @RequestParam(required = false) String reason) {
+        reservationService.cancel(id, reason);
         cache.evictOverview(); cache.evictUsage();
         return Result.ok();
     }
