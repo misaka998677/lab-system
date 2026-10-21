@@ -251,50 +251,14 @@ INSERT INTO sys_role (id, role_code, role_name, sort_no, remark) VALUES
 (4, 'ROLE_STUDENT', '学生',         4, '可发起预约');
 
 -- 用户（密码均为 123456 的 BCrypt）
--- 核心测试账号：
---   1. admin           (ROLE_ADMIN)     : 系统超级管理员，可访问所有模块和全部实验室数据
---   2. labadmin        (ROLE_LABADMIN)  : 综合测试账号，管理 LAB-001
---   3. teacher         (ROLE_TEACHER)   : 教师李教师，可审核本学院预约
---   4. student         (ROLE_STUDENT)   : 学生张同学，可发起预约
---   5. teacher_sun     (ROLE_TEACHER)   : 教师孙教师
---   7. student_wang    (ROLE_STUDENT)   : 学生王同学
---
--- 各实验室独立管理员账号（数据隔离）：
---   102. labadmin_lab02 (LAB-002 网络与安全实验室)
---   103. labadmin_lab03 (LAB-003 嵌入式实验室)
---   104. labadmin_lab04 (LAB-004 软件工程实验室二)
---   105. labadmin_lab05 (LAB-005 数据库技术实验室)
---   106. labadmin_lab06 (LAB-006 人工智能实验室)
---   107. labadmin_lab07 (LAB-007 物联网综合实验室)
---   108. labadmin_lab08 (LAB-008 电子电工实验室)
---   109. labadmin_lab09 (LAB-009 移动应用开发实验室)
---   110. labadmin_lab10 (LAB-010 云计算与运维实验室)
---
--- 数据隔离：每个 LABADMIN 仅可操作自己管理的实验室（设备、报修、耗材、审核等）
 INSERT INTO sys_user (id, username, password, real_name, phone, email, gender, dept_id) VALUES
-(1, 'admin',           '$2a$10$rmo6sNdR3/ZdbPAX1rEGGOaCNiYfk/Sw13a0uFixgKHLLz9KKpR/G', '超级管理员',    '13800000000', 'admin@lab.edu',       1, 1),
-(2, 'labadmin',        '$2a$10$rmo6sNdR3/ZdbPAX1rEGGOaCNiYfk/Sw13a0uFixgKHLLz9KKpR/G', '实验室王老师',  '13800000001', 'lab@lab.edu',         1, 2),
-(3, 'teacher',         '$2a$10$rmo6sNdR3/ZdbPAX1rEGGOaCNiYfk/Sw13a0uFixgKHLLz9KKpR/G', '李教师',        '13800000002', 'teacher@lab.edu',     1, 2),
-(4, 'student',         '$2a$10$rmo6sNdR3/ZdbPAX1rEGGOaCNiYfk/Sw13a0uFixgKHLLz9KKpR/G', '张同学',        '13800000003', 'student@lab.edu',     1, 2),
-(5, 'teacher_sun',     '$2a$10$rmo6sNdR3/ZdbPAX1rEGGOaCNiYfk/Sw13a0uFixgKHLLz9KKpR/G', '孙教师',        '13800000022', 'teacher_sun@lab.edu', 1, 3),
-(7, 'student_wang',    '$2a$10$rmo6sNdR3/ZdbPAX1rEGGOaCNiYfk/Sw13a0uFixgKHLLz9KKpR/G', '王同学',        '13800000004', 'student_wang@lab.edu',1, 2),
-(102, 'labadmin_lab02', '$2a$10$rmo6sNdR3/ZdbPAX1rEGGOaCNiYfk/Sw13a0uFixgKHLLz9KKpR/G', '陈实验室管理员', '13800000102', 'lab02@lab.edu',     1, 2),
-(103, 'labadmin_lab03', '$2a$10$rmo6sNdR3/ZdbPAX1rEGGOaCNiYfk/Sw13a0uFixgKHLLz9KKpR/G', '赵实验室管理员', '13800000103', 'lab03@lab.edu',     1, 2),
-(104, 'labadmin_lab04', '$2a$10$rmo6sNdR3/ZdbPAX1rEGGOaCNiYfk/Sw13a0uFixgKHLLz9KKpR/G', '孙实验室管理员', '13800000104', 'lab04@lab.edu',     1, 2),
-(105, 'labadmin_lab05', '$2a$10$rmo6sNdR3/ZdbPAX1rEGGOaCNiYfk/Sw13a0uFixgKHLLz9KKpR/G', '周实验室管理员', '13800000105', 'lab05@lab.edu',     1, 2),
-(106, 'labadmin_lab06', '$2a$10$rmo6sNdR3/ZdbPAX1rEGGOaCNiYfk/Sw13a0uFixgKHLLz9KKpR/G', '吴实验室管理员', '13800000106', 'lab06@lab.edu',     1, 2),
-(107, 'labadmin_lab07', '$2a$10$rmo6sNdR3/ZdbPAX1rEGGOaCNiYfk/Sw13a0uFixgKHLLz9KKpR/G', '郑实验室管理员', '13800000107', 'lab07@lab.edu',     1, 2),
-(108, 'labadmin_lab08', '$2a$10$rmo6sNdR3/ZdbPAX1rEGGOaCNiYfk/Sw13a0uFixgKHLLz9KKpR/G', '冯实验室管理员', '13800000108', 'lab08@lab.edu',     1, 2),
-(109, 'labadmin_lab09', '$2a$10$rmo6sNdR3/ZdbPAX1rEGGOaCNiYfk/Sw13a0uFixgKHLLz9KKpR/G', '褚实验室管理员', '13800000109', 'lab09@lab.edu',     1, 2),
-(110, 'labadmin_lab10', '$2a$10$rmo6sNdR3/ZdbPAX1rEGGOaCNiYfk/Sw13a0uFixgKHLLz9KKpR/G', '卫实验室管理员', '13800000110', 'lab10@lab.edu',     1, 2);
+(1, 'admin',    '$2a$10$rmo6sNdR3/ZdbPAX1rEGGOaCNiYfk/Sw13a0uFixgKHLLz9KKpR/G', '超级管理员', '13800000000', 'admin@lab.edu', 1, 1),
+(2, 'labadmin', '$2a$10$rmo6sNdR3/ZdbPAX1rEGGOaCNiYfk/Sw13a0uFixgKHLLz9KKpR/G', '实验室王老师', '13800000001', 'lab@lab.edu',   1, 2),
+(3, 'teacher',  '$2a$10$rmo6sNdR3/ZdbPAX1rEGGOaCNiYfk/Sw13a0uFixgKHLLz9KKpR/G', '李教师',     '13800000002', 't@lab.edu',     1, 2),
+(4, 'student',  '$2a$10$rmo6sNdR3/ZdbPAX1rEGGOaCNiYfk/Sw13a0uFixgKHLLz9KKpR/G', '张同学',     '13800000003', 's@lab.edu',     1, 2);
 
 INSERT INTO sys_user_role (user_id, role_id) VALUES
-(1,1),                                                        -- 超级管理员
-(2,2),                                                        -- 综合测试账号，管理 LAB-001
-(3,3),(5,3),                                                  -- 教师（role_id=3 ROLE_TEACHER）
-(4,4),(7,4),                                                  -- 学生（role_id=4 ROLE_STUDENT）
-(102,2),(103,2),(104,2),(105,2),(106,2),                     -- 各实验室独立管理员
-(107,2),(108,2),(109,2),(110,2);
+(1,1),(2,2),(3,3),(4,4);
 
 -- 菜单（type:1目录 2菜单 3按钮）
 INSERT INTO sys_menu (id, parent_id, name, path, component, icon, perm, type, sort_no) VALUES
@@ -315,7 +279,6 @@ INSERT INTO sys_menu (id, parent_id, name, path, component, icon, perm, type, so
 (21,  2, '实验室档案', 'room',   'lab/room/index',     'el-icon-house',          'lab:room:list',     2, 1),
 (22,  2, '设备台账',   'device', 'lab/device/index',   'el-icon-cpu',            'lab:device:list',   2, 2),
 (23,  2, '维修单',     'repair', 'lab/repair/index',   'el-icon-s-tools',        'lab:repair:list',   2, 3),
-(24,  2, '我的报修记录', 'repair/mine', 'lab/repair/mine/index', 'el-icon-document', 'lab:repair:mine', 2, 4),
 
 -- 预约
 (31,  3, '我的预约',   'mine',    'reserve/mine/index',  'el-icon-edit-outline', 'reserve:mine',      2, 1),
@@ -336,39 +299,25 @@ INSERT INTO sys_role_menu (role_id, menu_id)
 SELECT 1, id FROM sys_menu;
 
 INSERT INTO sys_role_menu (role_id, menu_id) VALUES
--- 实验室管理员：实验室管理（本实验室）、预约审核/签到、耗材管理、统计分析、我的报修记录
---   - 可见模块：实验室管理 / 预约中心 / 耗材管理 / 统计分析
---   - 数据范围：仅本实验室（lab_room.manager_id = 当前用户）
-(2,2),(2,21),(2,22),(2,23),(2,24),
+-- 实验室管理员：实验室管理、预约审核/签到、耗材、统计
+(2,2),(2,21),(2,22),(2,23),
 (2,3),(2,31),(2,32),(2,33),
 (2,4),(2,41),(2,42),
 (2,5),(2,51),(2,52),(2,53),
--- 教师：实验室档案（只读）、设备台账（只读）、我的预约、签到记录、耗材档案（只读）、我的报修记录
---   - 可见模块：实验室管理 / 预约中心 / 耗材管理（仅耗材档案）
---   - ⚠️ 教师不可见统计分析模块（stat/* 接口仅开放给 ADMIN/LABADMIN），避免出现"无访问权限"
---   - 数据范围：仅本学院（dept_id）下的实验室可审核预约、可见设备与耗材
-(3,2),(3,21),(3,22),(3,24),
-(3,3),(3,31),(3,32),(3,33),
-(3,4),(3,41),
--- 学生：实验室档案（只读）、设备台账（只读）、我的预约、签到记录、我的报修记录
---   - 数据范围：仅本人相关（自己提交的预约、自己的报修记录）
-(4,2),(4,21),(4,22),(4,24),
+-- 教师：实验室档案、设备台账、我的预约、签到记录、耗材档案查看、统计
+(3,2),(3,21),(3,22),
+(3,3),(3,31),(3,33),
+(3,4),(3,41),(3,42),
+(3,5),(3,51),(3,52),(3,53),
+-- 学生：实验室档案、我的预约、签到记录
+(4,2),(4,21),
 (4,3),(4,31),(4,33);
 
 -- 实验室
---   - 每个实验室绑定独立实验室管理员账号（manager_id -> sys_user.id），对应角色 ROLE_LABADMIN
---   - LABADMIN 登录后只能查看/操作自己管理的实验室数据（设备、报修、耗材、审核预约）
 INSERT INTO lab_room (id, code, name, building, room_no, capacity, dept_id, manager_id, status) VALUES
-(1,  'LAB-001', '软件工程实验室一', '信息楼', 'A301', 60, 2, 2,   1),   -- manager = labadmin (用户ID=2, 综合测试账号)
-(2,  'LAB-002', '网络与安全实验室', '信息楼', 'A302', 40, 2, 102, 1),   -- manager = labadmin_lab02 (用户ID=102)
-(3,  'LAB-003', '嵌入式实验室',     '信息楼', 'A303', 30, 2, 103, 1),   -- manager = labadmin_lab03 (用户ID=103)
-(10, 'LAB-004', '软件工程实验室二', '信息楼', 'A304', 50, 2, 104, 1),   -- manager = labadmin_lab04 (用户ID=104)
-(11, 'LAB-005', '数据库技术实验室', '信息楼', 'A305', 40, 2, 105, 1),   -- manager = labadmin_lab05 (用户ID=105)
-(12, 'LAB-006', '人工智能实验室',   '科创楼', 'B201', 60, 2, 106, 1),   -- manager = labadmin_lab06 (用户ID=106)
-(13, 'LAB-007', '物联网综合实验室', '科创楼', 'B202', 45, 2, 107, 1),   -- manager = labadmin_lab07 (用户ID=107)
-(14, 'LAB-008', '电子电工实验室',   '实验楼', 'C101', 35, 2, 108, 1),   -- manager = labadmin_lab08 (用户ID=108)
-(15, 'LAB-009', '移动应用开发实验室','信息楼', 'A306', 40, 2, 109, 1),   -- manager = labadmin_lab09 (用户ID=109)
-(16, 'LAB-010', '云计算与运维实验室','信息楼', 'A401', 50, 2, 110, 1);   -- manager = labadmin_lab10 (用户ID=110)
+(1, 'LAB-001', '软件工程实验室一', '信息楼', 'A301', 60, 2, 2, 1),
+(2, 'LAB-002', '网络与安全实验室', '信息楼', 'A302', 40, 2, 2, 1),
+(3, 'LAB-003', '嵌入式实验室',     '信息楼', 'A303', 30, 3, 2, 1);
 
 -- 设备
 INSERT INTO lab_device (id, asset_no, name, category, brand, model, lab_id, status, price) VALUES
@@ -377,11 +326,11 @@ INSERT INTO lab_device (id, asset_no, name, category, brand, model, lab_id, stat
 (3, 'DEV-0003', '交换机', '网络',   '华为', 'S5700',    2, 1, 6800.00),
 (4, 'DEV-0004', '示波器', '仪器',   'RIGOL','DS1054Z',  3, 1, 3200.00);
 
--- 示例预约（已通过）
+-- 一条示例预约（已通过）
 INSERT INTO lab_reservation
 (id, reserve_no, user_id, teacher_id, lab_id, device_ids, purpose, start_time, end_time, status, audit_user_id, audit_time)
 VALUES
-(1, 'R20260616001', 7, 5, 1, '1,2', '《Java EE 课程实验》', '2026-06-17 14:00:00', '2026-06-17 17:00:00', 1, 2, NOW());
+(1, 'R20260616001', 4, 3, 1, '1,2', '《Java EE 课程实验》', '2026-06-17 14:00:00', '2026-06-17 17:00:00', 1, 2, NOW());
 
 -- 耗材
 INSERT INTO stock_item (id, code, name, category, unit, qty, warn_qty, lab_id) VALUES
@@ -389,40 +338,10 @@ INSERT INTO stock_item (id, code, name, category, unit, qty, warn_qty, lab_id) V
 (2, 'C-0002', 'A4 打印纸',   '办公', '包',   30, 10, 1),
 (3, 'C-0003', '电阻 1k 欧',  '电子', '只', 1000, 200, 3);
 
--- 耗材出入库流水（由各实验室管理员操作）
+-- 耗材出入库流水（用于库存预警、预约联动和统计展示）
 INSERT INTO stock_record (id, item_id, type, qty, reservation_id, user_id, remark, create_time) VALUES
-(1, 1, 1, 60, NULL, 102, '学期初网络实验耗材入库', '2026-06-10 09:00:00'),     -- labadmin_lab02 操作 lab_id=2
-(2, 2, 1, 20, NULL, 2,   '实验报告打印纸补充',    '2026-06-10 09:30:00'),     -- labadmin 操作 lab_id=1
-(3, 3, 1, 500, NULL, 103, '电子实验基础元件补充', '2026-06-10 10:00:00'),     -- labadmin_lab03 操作 lab_id=3
-(4, 1, 2, 8, 1, 2,   'Java EE 课程实验预约领用', '2026-06-16 13:40:00'),
-(5, 3, 2, 120, 1, 103, '嵌入式实验课领用',         '2026-06-16 14:10:00');
-
--- ============================================================
--- 【权限修复脚本】在已部署数据库执行：防止教师/学生出现"无访问权限"
--- ------------------------------------------------------------
--- 统计分析（stat/* 接口仅开放给 ADMIN/LABADMIN），教师/学生不应有该菜单
-DELETE FROM sys_role_menu WHERE role_id IN (3, 4) AND menu_id IN (5, 51, 52, 53);
--- 耗材出入库记录（stock_record/* 接口仅开放给 ADMIN/LABADMIN），教师/学生不应有该菜单
-DELETE FROM sys_role_menu WHERE role_id IN (3, 4) AND menu_id = 42;
--- 维修单（lab/repair/page 接口仅开放给 ADMIN/LABADMIN），教师/学生不应有该菜单
-DELETE FROM sys_role_menu WHERE role_id IN (3, 4) AND menu_id = 23;
-
--- ============================================================
--- 数据范围：按账号-角色-实验室匹配（数据初始化参考）
--- 核心测试账号：
---   sys_user.id=1   -> 角色 ADMIN (sys_role.id=1)     -> 全部实验室
---   sys_user.id=2   -> 角色 LABADMIN (sys_role.id=2)   -> lab_room.manager_id=2 (LAB-001 软件工程实验室一)
---   sys_user.id=3   -> 角色 TEACHER (sys_role.id=3)    -> 学院 dept_id=2
---   sys_user.id=4   -> 角色 STUDENT (sys_role.id=4)    -> 学院 dept_id=2
---   sys_user.id=5   -> 角色 TEACHER (sys_role.id=3)    -> 学院 dept_id=3
---   sys_user.id=7   -> 角色 STUDENT (sys_role.id=4)    -> 学院 dept_id=2
--- 各实验室独立管理员：
---   sys_user.id=102 -> 角色 LABADMIN (sys_role.id=2)   -> lab_room.manager_id=102 (LAB-002 网络与安全实验室)
---   sys_user.id=103 -> 角色 LABADMIN (sys_role.id=2)   -> lab_room.manager_id=103 (LAB-003 嵌入式实验室)
---   sys_user.id=104 -> 角色 LABADMIN (sys_role.id=2)   -> lab_room.manager_id=104 (LAB-004 软件工程实验室二)
---   sys_user.id=105 -> 角色 LABADMIN (sys_role.id=2)   -> lab_room.manager_id=105 (LAB-005 数据库技术实验室)
---   sys_user.id=106 -> 角色 LABADMIN (sys_role.id=2)   -> lab_room.manager_id=106 (LAB-006 人工智能实验室)
---   sys_user.id=107 -> 角色 LABADMIN (sys_role.id=2)   -> lab_room.manager_id=107 (LAB-007 物联网综合实验室)
---   sys_user.id=108 -> 角色 LABADMIN (sys_role.id=2)   -> lab_room.manager_id=108 (LAB-008 电子电工实验室)
---   sys_user.id=109 -> 角色 LABADMIN (sys_role.id=2)   -> lab_room.manager_id=109 (LAB-009 移动应用开发实验室)
---   sys_user.id=110 -> 角色 LABADMIN (sys_role.id=2)   -> lab_room.manager_id=110 (LAB-010 云计算与运维实验室)
+(1, 1, 1, 60, NULL, 2, '学期初网络实验耗材入库', '2026-06-10 09:00:00'),
+(2, 2, 1, 20, NULL, 2, '实验报告打印纸补充', '2026-06-10 09:30:00'),
+(3, 3, 1, 500, NULL, 2, '电子实验基础元件补充', '2026-06-10 10:00:00'),
+(4, 1, 2, 8, 1, 2, 'Java EE 课程实验预约领用', '2026-06-16 13:40:00'),
+(5, 3, 2, 120, 1, 2, '嵌入式实验课领用', '2026-06-16 14:10:00');
