@@ -258,20 +258,17 @@ public class ReservationService {
     }
 
     /**
-     * 判断当前时间是否在预约时间段内（签到/签退有效窗口）
-     * 与 ReservationTimeoutService 保持一致：签入/签退均使用 30 分钟超时窗口
-     * - 签入有效窗口：预约开始时间前30分钟 ~ 预约开始时间后30分钟
-     * - 签退有效窗口：预约结束时间前30分钟 ~ 预约结束时间后30分钟
+     * 判断当前时间是否在预约时间段内
+     * 允许提前15分钟签到，允许延后30分钟签退（给用户一定的缓冲时间）
      */
     private boolean isInReservationTime(Reservation r, LocalDateTime now) {
         if (r.getStartTime() == null || r.getEndTime() == null) return false;
 
-        // 签入：预约开始前后30分钟内可签入（与超时任务一致）
-        LocalDateTime effectiveStart = r.getStartTime().plusMinutes(30);
-        if (now.isAfter(effectiveStart)) return false;
-
-        // 签退：预约结束前后30分钟内可签退
+        // 签入允许提前15分钟
+        LocalDateTime effectiveStart = r.getStartTime().minusMinutes(15);
+        // 签退允许延后30分钟
         LocalDateTime effectiveEnd = r.getEndTime().plusMinutes(30);
-        return !now.isAfter(effectiveEnd);
+
+        return !now.isBefore(effectiveStart) && !now.isAfter(effectiveEnd);
     }
 }

@@ -7,7 +7,7 @@ import ElementUI from 'element-ui'
 import 'element-ui/lib/theme-chalk/index.css'
 import './assets/main.scss'
 
-import './router/router-guards'
+import './router-guards'
 import './directives/permission'
 
 // 注意：echarts 改为按需加载（utils/echarts.js），不再注册到 Vue.prototype，

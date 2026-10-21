@@ -145,8 +145,7 @@ export default {
     async onCommand(c) {
       if (c === 'logout') {
         await this.$store.dispatch('user/logout')
-        // 整页刷新：彻底重置 Vue Router 的 addRoute 状态，避免旧角色路由残留
-        window.location.replace('/login')
+        this.$router.replace('/login')
       } else if (c === 'profile') {
         this.$message.info('个人中心功能即将上线')
       }

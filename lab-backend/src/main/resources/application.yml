@@ -1,30 +1,31 @@
-spring:
-  application:
-    name: lab-system
-
-  datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/lab_system?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-    username: root
-    password: 123456
-
-  jackson:
-    date-format: yyyy-MM-dd HH:mm:ss
-    time-zone: Asia/Shanghai
-    default-property-inclusion: non_null
-
 server:
   port: 9090
   servlet:
     context-path: /api
+
+spring:
+  application:
+    name: lab-backend
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # 生产部署：建议通过环境变量覆盖；不要在仓库中暴露真实账号。
+    url: ${DB_URL:jdbc:mysql://localhost:3306/lab_system?useUnicode=true&characterEncoding=utf8&useSSL=true&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:123456}
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+    default-property-inclusion: non_null
 
 mybatis:
   mapper-locations: classpath:mapper/**/*.xml
   type-aliases-package: com.lab.module.**.entity
   configuration:
     map-underscore-to-camel-case: true
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
     cache-enabled: false
+    # 生产环境关闭控制台 SQL 日志（避免泄露表结构与参数）；
+    # 如需调试，临时在 IDE 启动参数中打开即可。
+    log-impl: ${MYBATIS_LOG:org.apache.ibatis.logging.nologging.NoLoggingImpl}
 
 pagehelper:
   helper-dialect: mysql
@@ -34,18 +35,17 @@ pagehelper:
 
 lab:
   api:
-    version: v1
+    # API 版本前缀，设置为空则不带版本号
+    # 生产环境建议使用 /v1，便于后续版本演进和灰度发布
+    version: ${API_VERSION:v1}
   jwt:
-    secret: bGFicy1zeXN0ZW0tanV3dC1zZWNyZXQta2V5LWZvci1obWFjLXNoYTI1Ni1lbmM=
-    expire: 86400
+    # 生产部署：通过环境变量 JWT_SECRET 注入 base64 编码的 32+ 字节密钥。
+    secret: ${JWT_SECRET:bGFiLXN5c3RlbS1qd3Qtc2VjcmV0LWtleS1mb3ItaG1hYy1zaGEyNTYtMjAyNg==}
+    expire-minutes: ${JWT_EXPIRE_MINUTES:720}
     header: Authorization
     prefix: "Bearer "
-  data-scope:
-    enabled: true
-  ws:
-    url: ws://localhost:9090/api/ws
 
 logging:
   level:
-    com.lab: debug
+    com.lab: info
     org.springframework.security: warn
