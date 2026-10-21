@@ -28,12 +28,10 @@ public class LabDeviceRepairService {
     private final LabDeviceRepairMapper repairMapper;
     private final LabDeviceMapper       deviceMapper;
     private final StatPushService       statPushService;
-    private final SysLogService        sysLogService;
 
     @Autowired
-    public LabDeviceRepairService(LabDeviceRepairMapper r, LabDeviceMapper d,
-                                   @Lazy StatPushService sps, @Lazy SysLogService sls) {
-        this.repairMapper = r; this.deviceMapper = d; this.statPushService = sps; this.sysLogService = sls;
+    public LabDeviceRepairService(LabDeviceRepairMapper r, LabDeviceMapper d, @Lazy StatPushService sps) {
+        this.repairMapper = r; this.deviceMapper = d; this.statPushService = sps;
     }
 
     public PageResult<LabDeviceRepair> page(int pageNum, int pageSize,

@@ -1,168 +1,147 @@
 package com.lab.module.stock.controller;
 
-import com.lab.common.ExcelExportUtil;
-import com.lab.common.ExcelImportUtil;
-import com.lab.common.ImportResult;
-import com.lab.common.PageParam;
 import com.lab.common.PageResult;
 import com.lab.common.Result;
-import com.lab.config.StatCacheInvalidator;
 import com.lab.module.stock.dto.StockRecordDTO;
 import com.lab.module.stock.entity.StockItem;
 import com.lab.module.stock.entity.StockRecord;
 import com.lab.module.stock.service.StockService;
 import com.lab.security.LoginUser;
 import com.lab.security.SecurityUtil;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.OutputStream;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
- * 档案 CRUD + 出入库流水（支持 reservationId 联动模块3 预约单）。
+ *
+ * <p>档案 CRUD + 出入库流水（支持 reservationId 联动模块3 预约单）。</p>
  */
 @RestController
 @RequestMapping("/stock")
 public class StockController {
 
     private final StockService stockService;
-    private final StatCacheInvalidator cache;
 
-    @Autowired
-    public StockController(StockService stockService, StatCacheInvalidator c) {
+    public StockController(StockService stockService) {
         this.stockService = stockService;
-        this.cache = c;
     }
 
     // ---------------- 档案 ----------------
 
     @GetMapping("/item/page")
+    @PreAuthorize("hasAuthority('stock:item:list')")
     public Result<PageResult<StockItem>> itemPage(@RequestParam(defaultValue = "1") int pageNum,
                                                   @RequestParam(defaultValue = "10") int pageSize,
                                                   @RequestParam(required = false) String keyword,
                                                   @RequestParam(required = false) Long labId,
                                                   @RequestParam(required = false) Integer warningOnly) {
-        int[] p = PageParam.clamp(pageNum, pageSize);
-        return Result.ok(stockService.itemPage(p[0], p[1], keyword, labId, warningOnly));
+        return Result.ok(stockService.itemPage(pageNum, pageSize, keyword, labId, warningOnly));
     }
 
     @GetMapping("/item/warnings")
-    @PreAuthorize("hasAnyRole('ADMIN','LABADMIN')")
+    @PreAuthorize("hasAuthority('stock:item:list')")
     public Result<java.util.List<StockItem>> warnings(@RequestParam(defaultValue = "10") Integer limit) {
-        int p = Math.min(limit == null ? 10 : limit, 100);
-        return Result.ok(stockService.warningList(p));
+        return Result.ok(stockService.warningList(limit));
     }
 
     @GetMapping("/item/{id}")
+    @PreAuthorize("hasAuthority('stock:item:list')")
     public Result<StockItem> itemDetail(@PathVariable Long id) {
         return Result.ok(stockService.detail(id));
     }
 
     @PostMapping("/item")
-    @PreAuthorize("hasAnyRole('ADMIN','LABADMIN')")
+    @PreAuthorize("hasAuthority('stock:item:list')")
     public Result<Long> itemCreate(@RequestBody StockItem item) {
-        Long id = stockService.create(item);
-        cache.evictStock(); cache.evictOverview();
-        return Result.ok(id);
+        return Result.ok(stockService.create(item));
     }
 
     @PutMapping("/item")
-    @PreAuthorize("hasAnyRole('ADMIN','LABADMIN')")
+    @PreAuthorize("hasAuthority('stock:item:list')")
     public Result<?> itemUpdate(@RequestBody StockItem item) {
         stockService.update(item);
-        cache.evictStock(); cache.evictOverview();
         return Result.ok();
     }
 
     @DeleteMapping("/item/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','LABADMIN')")
+    @PreAuthorize("hasAuthority('stock:item:list')")
     public Result<?> itemDelete(@PathVariable Long id) {
         stockService.delete(id);
-        cache.evictStock(); cache.evictOverview();
         return Result.ok();
     }
 
     @GetMapping("/item/export")
-    @PreAuthorize("hasAnyRole('ADMIN','LABADMIN')")
+    @PreAuthorize("hasAuthority('stock:item:list')")
     public void itemExport(HttpServletResponse resp) throws Exception {
         List<StockItem> list = stockService.itemListAll();
-        ExcelExportUtil.export("耗材档案导出.xlsx", resp,
-                new String[]{"耗材编号", "名称", "实验室", "分类", "单位", "当前库存", "预警值"},
-                list,
-                (row, it) -> {
-                    row.createCell(0).setCellValue(it.getCode() != null ? it.getCode() : "");
-                    row.createCell(1).setCellValue(it.getName() != null ? it.getName() : "");
-                    row.createCell(2).setCellValue(it.getLabName() != null ? it.getLabName() : "");
-                    row.createCell(3).setCellValue(it.getCategory() != null ? it.getCategory() : "");
-                    row.createCell(4).setCellValue(it.getUnit() != null ? it.getUnit() : "");
-                    row.createCell(5).setCellValue(it.getQty() != null ? it.getQty().doubleValue() : 0.0);
-                    row.createCell(6).setCellValue(it.getWarnQty() != null ? it.getWarnQty().doubleValue() : 0.0);
-                });
-    }
 
-    @GetMapping("/item/template")
-    @PreAuthorize("hasAnyRole('ADMIN','LABADMIN')")
-    public void itemTemplate(HttpServletResponse resp) throws Exception {
-        String[] headers = {"耗材编号", "名称", "分类", "单位", "库存", "预警阈值", "实验室"};
-        String[] sample = {"HC-001", "打印纸", "办公耗材", "包", "10", "5", "请从系统中查看实验室名称或填写实验室 ID"};
+        Workbook wb = new XSSFWorkbook();
+        Sheet s = wb.createSheet("耗材档案");
+        CellStyle headerStyle = wb.createCellStyle();
+        Font headerFont = wb.createFont(); headerFont.setBold(true);
+        headerStyle.setFont(headerFont);
+
+        Row h = s.createRow(0);
+        String[] headers = {"耗材编号", "名称", "实验室", "分类", "单位", "当前库存", "预警值"};
+        for (int i = 0; i < headers.length; i++) {
+            h.createCell(i).setCellValue(headers[i]);
+            h.getCell(i).setCellStyle(headerStyle);
+        }
+
+        int r = 1;
+        for (StockItem row : list) {
+            Row rowObj = s.createRow(r++);
+            rowObj.createCell(0).setCellValue(row.getCode() != null ? row.getCode() : "");
+            rowObj.createCell(1).setCellValue(row.getName() != null ? row.getName() : "");
+            rowObj.createCell(2).setCellValue(row.getLabName() != null ? row.getLabName() : "");
+            rowObj.createCell(3).setCellValue(row.getCategory() != null ? row.getCategory() : "");
+            rowObj.createCell(4).setCellValue(row.getUnit() != null ? row.getUnit() : "");
+            rowObj.createCell(5).setCellValue(row.getQty() != null ? row.getQty().doubleValue() : 0.0);
+            rowObj.createCell(6).setCellValue(row.getWarnQty() != null ? row.getWarnQty().doubleValue() : 0.0);
+        }
+
         resp.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         resp.setHeader("Content-Disposition",
-            "attachment; filename=" + java.net.URLEncoder.encode("耗材档案导入模板.xlsx", java.nio.charset.StandardCharsets.UTF_8));
-        try (java.io.OutputStream out = resp.getOutputStream()) {
-            ExcelImportUtil.writeTemplate(out, headers, sample);
-        }
-    }
-
-    @PostMapping("/item/import")
-    @PreAuthorize("hasAnyRole('ADMIN','LABADMIN')")
-    public Result<ImportResult> itemImport(@RequestParam("file") MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            return Result.fail("请上传文件");
-        }
-        try {
-            ImportResult result = stockService.importItems(file.getInputStream());
-            cache.evictStock(); cache.evictOverview();
-            return Result.ok("导入完成，共 " + result.getSuccessCount() + " 行", result);
-        } catch (Exception e) {
-            return Result.fail(500, e.getMessage());
-        }
+            "attachment; filename=" + URLEncoder.encode("耗材档案导出.xlsx", StandardCharsets.UTF_8));
+        try (OutputStream out = resp.getOutputStream()) { wb.write(out); }
     }
 
     // ---------------- 流水 ----------------
 
     @GetMapping("/record/page")
-    @PreAuthorize("hasAnyRole('ADMIN','LABADMIN')")
+    @PreAuthorize("hasAuthority('stock:record:list')")
     public Result<PageResult<StockRecord>> recordPage(@RequestParam(defaultValue = "1") int pageNum,
                                                       @RequestParam(defaultValue = "10") int pageSize,
                                                       @RequestParam(required = false) Long itemId,
                                                       @RequestParam(required = false) Integer type,
                                                       @RequestParam(required = false) Long reservationId) {
-        int[] p = PageParam.clamp(pageNum, pageSize);
-        return Result.ok(stockService.recordPage(p[0], p[1], itemId, type, reservationId));
+        return Result.ok(stockService.recordPage(pageNum, pageSize, itemId, type, reservationId));
     }
 
     @PostMapping("/record/in")
-    @PreAuthorize("hasAnyRole('ADMIN','LABADMIN')")
+    @PreAuthorize("hasAuthority('stock:record:list')")
     public Result<Long> stockIn(@RequestBody StockRecordDTO dto) {
         fillCurrentUser(dto);
-        Long id = stockService.stockIn(dto);
-        cache.evictStock(); cache.evictOverview();
-        return Result.ok(id);
+        return Result.ok(stockService.stockIn(dto));
     }
 
     @PostMapping("/record/out")
-    @PreAuthorize("hasAnyRole('ADMIN','LABADMIN')")
+    @PreAuthorize("hasAuthority('stock:record:list')")
     public Result<Long> stockOut(@RequestBody StockRecordDTO dto) {
         fillCurrentUser(dto);
-        Long id = stockService.stockOut(dto);
-        cache.evictStock(); cache.evictOverview();
-        return Result.ok(id);
+        return Result.ok(stockService.stockOut(dto));
     }
 
     private void fillCurrentUser(StockRecordDTO dto) {
+        // 只要存在当前登录用户，就以当前登录用户为准覆盖经办人，
+        // 忽略客户端传入的 userId，防止伪造经办人。
         LoginUser cu = SecurityUtil.current();
         if (cu != null && cu.getUser() != null) {
             dto.setUserId(cu.getUser().getId());
@@ -170,20 +149,38 @@ public class StockController {
     }
 
     @GetMapping("/record/export")
-    @PreAuthorize("hasAnyRole('ADMIN','LABADMIN')")
+    @PreAuthorize("hasAuthority('stock:record:list')")
     public void recordExport(HttpServletResponse resp) throws Exception {
         List<StockRecord> list = stockService.recordListAll();
-        ExcelExportUtil.export("出入库流水导出.xlsx", resp,
-                new String[]{"操作类型", "耗材名称", "操作人", "数量", "时间", "关联预约单"},
-                list,
-                (row, rc) -> {
-                    row.createCell(0).setCellValue(typeText(rc.getType()));
-                    row.createCell(1).setCellValue(rc.getItemName() != null ? rc.getItemName() : "");
-                    row.createCell(2).setCellValue(rc.getOperatorName() != null ? rc.getOperatorName() : "");
-                    row.createCell(3).setCellValue(rc.getQty() != null ? rc.getQty().doubleValue() : 0.0);
-                    row.createCell(4).setCellValue(rc.getCreateTime() != null ? rc.getCreateTime().toString() : "");
-                    row.createCell(5).setCellValue(rc.getReservationNo() != null ? rc.getReservationNo() : "");
-                });
+
+        Workbook wb = new XSSFWorkbook();
+        Sheet s = wb.createSheet("出入库流水");
+        CellStyle headerStyle = wb.createCellStyle();
+        Font headerFont = wb.createFont(); headerFont.setBold(true);
+        headerStyle.setFont(headerFont);
+
+        Row h = s.createRow(0);
+        String[] headers = {"操作类型", "耗材名称", "操作人", "数量", "时间", "关联预约单"};
+        for (int i = 0; i < headers.length; i++) {
+            h.createCell(i).setCellValue(headers[i]);
+            h.getCell(i).setCellStyle(headerStyle);
+        }
+
+        int r = 1;
+        for (StockRecord row : list) {
+            Row rowObj = s.createRow(r++);
+            rowObj.createCell(0).setCellValue(typeText(row.getType()));
+            rowObj.createCell(1).setCellValue(row.getItemName() != null ? row.getItemName() : "");
+            rowObj.createCell(2).setCellValue(row.getOperatorName() != null ? row.getOperatorName() : "");
+            rowObj.createCell(3).setCellValue(row.getQty() != null ? row.getQty().doubleValue() : 0.0);
+            rowObj.createCell(4).setCellValue(row.getCreateTime() != null ? row.getCreateTime().toString() : "");
+            rowObj.createCell(5).setCellValue(row.getReservationNo() != null ? row.getReservationNo() : "");
+        }
+
+        resp.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        resp.setHeader("Content-Disposition",
+            "attachment; filename=" + URLEncoder.encode("出入库流水导出.xlsx", StandardCharsets.UTF_8));
+        try (OutputStream out = resp.getOutputStream()) { wb.write(out); }
     }
 
     private String typeText(Integer type) {

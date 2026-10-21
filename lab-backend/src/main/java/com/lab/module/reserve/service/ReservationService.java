@@ -29,16 +29,11 @@ public class ReservationService {
 
     private final ReservationMapper reservationMapper;
     private final StatPushService statPushService;
-    private final SysLogService sysLogService;
-    private final SysUserMapper userMapper;
 
     @Autowired
-    public ReservationService(ReservationMapper m, @Lazy StatPushService sps,
-                              @Lazy SysLogService sls, SysUserMapper um) {
+    public ReservationService(ReservationMapper m, @Lazy StatPushService sps) {
         this.reservationMapper = m;
         this.statPushService = sps;
-        this.sysLogService = sls;
-        this.userMapper = um;
     }
 
     public PageResult<Reservation> page(int pageNum, int pageSize,
