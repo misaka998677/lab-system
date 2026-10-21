@@ -97,9 +97,9 @@
 </template>
 
 <script>
-import { statUsage } from '@/api/stat'
+import { statLabUsage } from '@/api/stat'
 import { loadECharts } from '@/utils/echarts'
-import { init as initWebSocket, on as onWebSocket, close as closeWebSocket } from '@/utils/websocket'
+import { ensureConnected, close, on } from '@/utils/websocket'
 import { getToken } from '@/utils/auth'
 import request from '@/utils/request'
 
@@ -139,15 +139,15 @@ export default {
     window.addEventListener('resize', this.handleResize)
     const token = getToken()
     if (token) {
-      initWebSocket(token)
-      this._wsUnsubscribe = onWebSocket('refresh-overview', this.handleWebSocketMessage)
+      ensureConnected(token)
+      this._wsUnsubscribe = on('refresh-overview', this.handleWebSocketMessage)
     }
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize)
     this.charts.forEach(c => { try { c.dispose() } catch (e) {} })
     if (this._wsUnsubscribe) this._wsUnsubscribe()
-    closeWebSocket()
+    close()
   },
   methods: {
     rankTag(i) { return ['danger', 'warning', 'primary'][i] || 'info' },
@@ -180,7 +180,18 @@ export default {
       return rowIndex % 2 === 1 ? { background: '#FAFBFC' } : {}
     },
     handleWebSocketMessage(msg) {
-      this.reload()
+      if (msg.type === 'overview' || msg.type === 'usage') {
+        const d = msg.data || {}
+        this.ranking = d.ranking || this.ranking
+        this.trend = d.trend || this.trend
+        this.monthTotal = d.monthTotal || this.monthTotal
+        this.$nextTick(async () => {
+          await this.initCharts()
+          this.renderBar()
+          this.renderLine()
+          this.handleResize()
+        })
+      }
     },
     async initCharts() {
       // 先销毁已有实例，避免重复初始化警告
@@ -206,7 +217,7 @@ export default {
       this.loading = true
       try {
         // async-parallel：同时拉数据与加载图表库
-        const [r] = await Promise.all([statUsage(), loadECharts()])
+        const [r] = await Promise.all([statLabUsage(), loadECharts()])
         const data = r.data || {}
         this.ranking = data.ranking || []
         this.trend = data.trend || []

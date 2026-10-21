@@ -82,9 +82,9 @@
 </template>
 
 <script>
-import { statFault } from '@/api/stat'
+import { statDeviceFault } from '@/api/stat'
 import { loadECharts } from '@/utils/echarts'
-import { init as initWebSocket, on as onWebSocket, close as closeWebSocket } from '@/utils/websocket'
+import { ensureConnected, close, on } from '@/utils/websocket'
 import { getToken } from '@/utils/auth'
 import request from '@/utils/request'
 
@@ -119,15 +119,15 @@ export default {
     window.addEventListener('resize', this.handleResize)
     const token = getToken()
     if (token) {
-      initWebSocket(token)
-      this._wsUnsubscribe = onWebSocket('refresh-overview', this.handleWebSocketMessage)
+      ensureConnected(token)
+      this._wsUnsubscribe = on('refresh-overview', this.handleWebSocketMessage)
     }
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize)
     this.charts.forEach(c => { try { c.dispose() } catch (e) {} })
     if (this._wsUnsubscribe) this._wsUnsubscribe()
-    closeWebSocket()
+    close()
   },
   methods: {
     repairTag(s) {
@@ -160,7 +160,17 @@ export default {
       return rowIndex % 2 === 1 ? { background: '#FAFBFC' } : {}
     },
     handleWebSocketMessage(msg) {
-      this.reload()
+      if (msg.type === 'overview' || msg.type === 'fault') {
+        const d = msg.data || {}
+        this.deviceStatus = d.deviceStatus || this.deviceStatus
+        this.repairStatus = d.repairStatus || this.repairStatus
+        this.$nextTick(async () => {
+          await this.initCharts()
+          this.renderDevicePie()
+          this.renderRepairPie()
+          this.handleResize()
+        })
+      }
     },
     async initCharts() {
       // 先销毁已有实例，避免重复初始化警告
@@ -179,7 +189,7 @@ export default {
     async reload() {
       this.loading = true
       try {
-        const [a] = await Promise.allSettled([statFault(), loadECharts()])
+        const [a] = await Promise.allSettled([statDeviceFault(), loadECharts()])
         const d = a.status === 'fulfilled' ? (a.value.data || {}) : {}
         this.deviceStatus = d.deviceStatus || []
         this.repairStatus = d.repairStatus || []
