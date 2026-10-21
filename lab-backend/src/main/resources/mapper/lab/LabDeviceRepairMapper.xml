@@ -55,8 +55,8 @@
   </select>
 
   <insert id="insert" parameterType="com.lab.module.lab.entity.LabDeviceRepair" useGeneratedKeys="true" keyProperty="id">
-    INSERT INTO lab_device_repair(device_id, reporter_id, fault_desc, status, report_time)
-    VALUES (#{deviceId}, #{reporterId}, #{faultDesc}, #{status}, #{reportTime})
+    INSERT INTO lab_device_repair(device_id, reporter_id, fault_desc, status)
+    VALUES (#{deviceId}, #{reporterId}, #{faultDesc}, #{status})
   </insert>
 
   <update id="update" parameterType="com.lab.module.lab.entity.LabDeviceRepair">
@@ -83,10 +83,5 @@
       </if>
     </where>
     ORDER BY rep.id DESC
-  </select>
-
-  <select id="countByDeviceIdAndStatus" resultType="int">
-    SELECT COUNT(*) FROM lab_device_repair
-    WHERE device_id = #{deviceId} AND status IN (0, 1)
   </select>
 </mapper>

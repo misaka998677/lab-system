@@ -125,9 +125,6 @@ public class StockService {
         StockRecord rec = buildRecord(dto, 1);
         recordMapper.insert(rec);
         statPushService.pushOverviewUpdate();
-
-        // 记录操作日志
-        saveStockLog("耗材入库", "入库", dto.getItemId(), dto.getQty(), 1);
         return rec.getId();
     }
 
@@ -143,22 +140,7 @@ public class StockService {
         StockRecord rec = buildRecord(dto, 2);
         recordMapper.insert(rec);
         statPushService.pushOverviewUpdate();
-
-        // 记录操作日志
-        saveStockLog("耗材出库", "出库", dto.getItemId(), dto.getQty(), 2);
         return rec.getId();
-    }
-
-    private void saveStockLog(String module, String action, Long itemId, Integer qty, int type) {
-        SysLog log = new SysLog();
-        log.setUserId(SecurityUtil.currentUserId());
-        log.setUsername(SecurityUtil.current() != null ? SecurityUtil.current().getUsername() : null);
-        log.setModule(module);
-        log.setAction(action);
-        log.setMethod("StockService." + (type == 1 ? "stockIn" : "stockOut"));
-        log.setParams("itemId=" + itemId + ", qty=" + qty);
-        log.setStatus(1);
-        sysLogService.asyncSave(log);
     }
 
     private StockItem validateForRecord(StockRecordDTO dto) {

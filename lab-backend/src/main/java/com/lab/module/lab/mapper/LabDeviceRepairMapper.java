@@ -16,7 +16,4 @@ public interface LabDeviceRepairMapper {
     int deleteById(@Param("id") Long id);
 
     List<LabDeviceRepair> findAll(@Param("scopeLabIds") List<Long> scopeLabIds);
-
-    /** 检查指定设备是否有未完成的维修单（status = 0 或 1）。 */
-    int countByDeviceIdAndStatus(@Param("deviceId") Long deviceId);
 }
